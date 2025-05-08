@@ -1,4 +1,7 @@
-﻿namespace TaskManagerServer.Controllers
+﻿using Microsoft.AspNetCore.Mvc;
+using TaskManagerServer.Services;
+
+namespace TaskManagerServer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
