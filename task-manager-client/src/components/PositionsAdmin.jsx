@@ -46,10 +46,10 @@ export default function PositionsAdmin() {
   const handleSave = async () => {
     try {
       if (editing) {
-        await axios.put(`/api/admin/positions/${editing.id}`, { name });
+        await axios.put(`/api/admin/positions/${editing.id}`, { Name: name });
         toast({ status: 'success', description: 'Должность обновлена' });
       } else {
-        await axios.post('/api/admin/positions', { name });
+        await axios.post('/api/admin/positions', {Name: name });
         toast({ status: 'success', description: 'Должность создана' });
       }
       onClose();
