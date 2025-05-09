@@ -93,9 +93,37 @@ namespace TaskManagerServer.Controllers
         [HttpPost("positions")]
         public async Task<ActionResult<Position>> CreatePosition(Position position)
         {
-            _context.Positions.Add(position);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetPositions), new { id = position.Id }, position);
+            Console.WriteLine($"→ Получили Name: '{position?.Name}'");
+            if (!ModelState.IsValid)
+            {
+                foreach (var err in ModelState.Values.SelectMany(v => v.Errors))
+                    Console.WriteLine("Validation error: " + err.ErrorMessage);
+                return BadRequest(ModelState);
+            }
+            if (!ModelState.IsValid)
+            {
+                // Логируем ошибку и возвращаем подробную информацию клиенту
+                foreach (var err in ModelState.Values.SelectMany(v => v.Errors))
+                    Console.WriteLine("Validation error: " + err.ErrorMessage);
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                // Добавление должности в базу данных
+                _context.Positions.Add(position);
+                await _context.SaveChangesAsync();
+
+                // Возвращаем созданную должность с HTTP статусом 201 (Created)
+                return CreatedAtAction(nameof(GetPositions), new { id = position.Id }, position);
+            }
+            catch (Exception ex)
+            {
+                // Логируем исключение
+                Console.WriteLine($"Error: {ex.Message}");
+                return StatusCode(500, "Произошла ошибка на сервере");
+            }
+
+
         }
 
         [HttpPut("positions/{id}")]
