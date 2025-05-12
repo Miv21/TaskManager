@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Button, Table, Thead, Tbody, Tr, Th, Td, Spinner,
   useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody, ModalFooter, FormControl, FormLabel,
-  Input, Select, useToast
+  ModalCloseButton, ModalBody, ModalFooter, FormControl,
+  FormLabel, Input, Select, FormErrorMessage, useToast
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -14,19 +14,22 @@ export default function UsersAdmin() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  // Для модалки
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [editing, setEditing] = useState(null);
+
   const [form, setForm] = useState({
     fullName: '', email: '', password: '',
-    role: '', departmentId: '', positionId: ''
+    roleId: '', departmentId: '', positionId: ''
+  });
+  const [errors, setErrors] = useState({
+    fullName: '', email: '', password: '',
+    roleId: '', positionId: ''
   });
 
-  // Статичный список ролей (или можно завести endpoint)
   const roles = [
-    { value: 'Admin', label: 'Админ' },
-    { value: 'Employer', label: 'Работодатель' },
-    { value: 'Employee', label: 'Сотрудник' },
+    { value: 3, label: 'Админ' },
+    { value: 1, label: 'Работодатель' },
+    { value: 2, label: 'Сотрудник' },
   ];
 
   useEffect(() => {
@@ -58,20 +61,22 @@ export default function UsersAdmin() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ fullName:'', email:'', password:'', role:'', departmentId:'', positionId:'' });
+    setForm({ fullName:'', email:'', password:'', roleId:'', departmentId:'', positionId:'' });
+    setErrors({ fullName:'', email:'', password:'', roleId:'', positionId:'' });
     onOpen();
   };
 
-  const openEdit = (user) => {
-    setEditing(user);
+  const openEdit = (u) => {
+    setEditing(u);
     setForm({
-      fullName: user.fullName,
-      email: user.email,
+      fullName: u.name,
+      email: u.email,
       password: '',
-      role: user.role.name || user.role, 
-      departmentId: user.departmentId,
-      positionId: user.positionId
+      roleId: u.roleId.toString(),
+      departmentId: u.departmentId?.toString() || '',
+      positionId: u.positionId.toString()
     });
+    setErrors({ fullName:'', email:'', password:'', roleId:'', positionId:'' });
     onOpen();
   };
 
@@ -81,24 +86,53 @@ export default function UsersAdmin() {
     refresh();
   };
 
+  // Валидация на клиенте
+  const validate = () => {
+    const errs = { fullName: '', email: '', password: '', roleId: '', positionId: '' };
+    if (!form.fullName.trim()) errs.fullName = 'Имя обязательно';
+    if (!form.email.trim()) errs.email = 'Email обязателен';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      errs.email = 'Неверный формат email';
+
+    if (!editing) {
+      if (!form.password) errs.password = 'Пароль обязателен';
+      else if (form.password.length < 6)
+      errs.password = 'Пароль должен быть не короче 6 символов';
+    } else if (form.password && form.password.length < 6) {
+      errs.password = 'Пароль должен быть не короче 6 символов';
+    }
+
+    if (!form.roleId) errs.roleId = 'Выберите роль';
+    if (!form.positionId) errs.positionId = 'Выберите должность';
+    setErrors(errs);
+    return !Object.values(errs).some(e => e);
+  };
+
   const handleSubmit = async () => {
+    if (!validate()) return;
+
     const payload = {
       fullName: form.fullName,
-      email: form.email,
-      passwordHash: form.password, // на сервере должно хешироваться
-      role: form.role,
-      departmentId: +form.departmentId,
-      positionId: +form.positionId
+      email:    form.email,
+      roleId:   Number(form.roleId),
+      positionId: Number(form.positionId),
+      ...(form.departmentId ? { departmentId: Number(form.departmentId) } : {}),
+      ...(form.password ? { password: form.password } : {})
     };
 
-    if (editing) {
-      // если нужен PUT, а у вас только POST/DELETE, можно сделать две операции: delete+create
-      await axios.delete(`/api/admin/users/${editing.id}`);
+    try {
+      if (editing) {
+        await axios.put(`/api/admin/users/${editing.id}`, payload);
+      } else {
+        await axios.post('/api/admin/users', payload);
+      }
+      toast({ status: 'success', description: editing ? 'Обновлено' : 'Создано' });
+      onClose();
+      refresh();
+    } catch (err) {
+      const msg = err.response?.data?.title || 'Ошибка на сервере';
+      toast({ status: 'error', description: msg });
     }
-    await axios.post('/api/admin/users', payload);
-    toast({ status: 'success', description: editing ? 'Обновлено' : 'Создано' });
-    onClose();
-    refresh();
   };
 
   return (
@@ -113,17 +147,18 @@ export default function UsersAdmin() {
           <Table variant="simple">
             <Thead>
               <Tr>
-                <Th>Имя</Th><Th>Email</Th><Th>Роль</Th><Th>Отдел</Th><Th>Должность</Th><Th>Действия</Th>
+                <Th>Имя</Th><Th>Email</Th><Th>Роль</Th>
+                <Th>Отдел</Th><Th>Должность</Th><Th>Действия с пользователями</Th>
               </Tr>
             </Thead>
             <Tbody>
               {users.map(u => (
                 <Tr key={u.id}>
-                  <Td>{u.fullName}</Td>
+                  <Td>{u.name}</Td>
                   <Td>{u.email}</Td>
-                  <Td>{u.role?.name || u.role}</Td>
-                  <Td>{u.department?.name}</Td>
-                  <Td>{u.positionId}</Td>
+                  <Td>{u.roleName}</Td>
+                  <Td>{u.departmentName || '—'}</Td>
+                  <Td>{u.positionName}</Td>
                   <Td>
                     <Button size="sm" mr={2} onClick={() => openEdit(u)}>✏️</Button>
                     <Button size="sm" colorScheme="red" onClick={() => handleDelete(u.id)}>🗑️</Button>
@@ -135,45 +170,66 @@ export default function UsersAdmin() {
         )
       }
 
-      {/* Модалка для создания/редактирования */}
       <Modal isOpen={isOpen} onClose={onClose} size="md">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editing ? 'Редактировать пользователя' : 'Новый пользователь'}</ModalHeader>
+          <ModalHeader>
+            {editing ? 'Редактировать пользователя' : 'Новый пользователь'}
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {/** Поля формы **/}
-            {[
-              { label: 'Имя', name: 'fullName', type: 'text' },
-              { label: 'Email', name: 'email', type: 'email' },
-              { label: 'Пароль', name: 'password', type: 'password' },
-            ].map(f => (
-              <FormControl key={f.name} mb={3}>
-                <FormLabel>{f.label}</FormLabel>
-                <Input
-                  type={f.type} value={form[f.name]}
-                  onChange={e => setForm({ ...form, [f.name]: e.target.value })}
-                />
-              </FormControl>
-            ))}
+            {/* Имя */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.fullName}>
+              <FormLabel>Имя</FormLabel>
+              <Input
+                value={form.fullName}
+                onChange={e => setForm({ ...form, fullName: e.target.value })}
+              />
+              <FormErrorMessage>{errors.fullName}</FormErrorMessage>
+            </FormControl>
 
-            <FormControl mb={3}>
+            {/* Email */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.email}>
+              <FormLabel>Email</FormLabel>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+              />
+              <FormErrorMessage>{errors.email}</FormErrorMessage>
+            </FormControl>
+
+            {/* Пароль */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.password}>
+              <FormLabel>Пароль</FormLabel>
+              <Input
+                type="password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+              />
+              <FormErrorMessage>{errors.password}</FormErrorMessage>
+            </FormControl>
+
+            {/* Роль */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.roleId}>
               <FormLabel>Роль</FormLabel>
               <Select
                 placeholder="Выберите роль"
-                value={form.role}
-                onChange={e => setForm({ ...form, role: e.target.value })}
+                value={form.roleId}
+                onChange={e => setForm({ ...form, roleId: e.target.value })}
               >
                 {roles.map(r => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </Select>
+              <FormErrorMessage>{errors.roleId}</FormErrorMessage>
             </FormControl>
 
+            {/* Отдел (необязательно) */}
             <FormControl mb={3}>
-              <FormLabel>Отдел</FormLabel>
+              <FormLabel>Отдел (необязательно)</FormLabel>
               <Select
-                placeholder="Выберите отдел"
+                placeholder="Без отдела"
                 value={form.departmentId}
                 onChange={e => setForm({ ...form, departmentId: e.target.value })}
               >
@@ -183,7 +239,8 @@ export default function UsersAdmin() {
               </Select>
             </FormControl>
 
-            <FormControl mb={3}>
+            {/* Должность */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.positionId}>
               <FormLabel>Должность</FormLabel>
               <Select
                 placeholder="Выберите должность"
@@ -194,6 +251,7 @@ export default function UsersAdmin() {
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </Select>
+              <FormErrorMessage>{errors.positionId}</FormErrorMessage>
             </FormControl>
           </ModalBody>
 
