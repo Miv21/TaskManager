@@ -80,7 +80,7 @@ export default function PositionsAdmin() {
       ) : (
         <Table variant="simple">
           <Thead>
-            <Tr><Th>ID</Th><Th>Название</Th><Th>Действия</Th></Tr>
+            <Tr><Th>ID</Th><Th>Название</Th><Th>Действия с должностями</Th></Tr>
           </Thead>
           <Tbody>
             {positions.map(pos => (
