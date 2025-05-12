@@ -1,72 +1,122 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TaskManagerServer.Models;
 
 namespace TaskManagerServer.Controllers
 {
-    //[Authorize(Roles = "Admin")]
     [ApiController]
     [Route("api/admin")]
     public class AdminController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IPasswordHasher<User> _hasher;
 
-        public AdminController(AppDbContext context)
+        public AdminController(AppDbContext context, IPasswordHasher<User> hasher)
         {
             _context = context;
+            _hasher = hasher;
         }
 
-        // Получить список всех пользователей
+        // GET api/admin/users
         [HttpGet("users")]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
         {
-            return await _context.Users.Include(u => u.Role).Include(u => u.Department).ToListAsync();
+            var list = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.Department)
+                .Include(u => u.Position)
+                .Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    Email = u.Email,
+                    RoleId = u.RoleId,
+                    RoleName = u.Role.Name,
+                    DepartmentId = u.DepartmentId,
+                    DepartmentName = u.Department != null ? u.Department.Name : null,
+                    PositionId = u.PositionId,
+                    PositionName = u.Position.Name
+                })
+                .ToListAsync();
+
+            return Ok(list);
         }
 
+        // POST api/admin/users
         [HttpPost("users")]
-        public async Task<ActionResult<User>> CreateUser(User user)
+        public async Task<ActionResult<User>> CreateUser([FromBody] CreateUserDto dto)
         {
-            // Здесь можно дополнительно добавить валидацию (например, проверку Email)
+            var user = new User
+            {
+                Name = dto.FullName,
+                Email = dto.Email,
+                RoleId = dto.RoleId,
+                DepartmentId = dto.DepartmentId,
+                PositionId = dto.PositionId,
+                PasswordHash = _hasher.HashPassword(null!, dto.Password)
+            };
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
         }
 
-        // Удалить пользователя по id
+        // PUT api/admin/users/{id}
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] CreateUserDto dto)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            user.Name = dto.FullName;
+            user.Email = dto.Email;
+            user.RoleId = dto.RoleId;
+            user.DepartmentId = dto.DepartmentId;
+            user.PositionId = dto.PositionId;
+
+            // Если пароль передан — обновляем его
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // DELETE api/admin/users/{id}
         [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return NotFound();
-
+            if (user == null) return NotFound();
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
+        // DEPARTMENTS
         [HttpGet("departments")]
         public async Task<ActionResult<IEnumerable<Department>>> GetDepartments()
-        {
-            return await _context.Departments.ToListAsync();
-        }
+            => Ok(await _context.Departments.ToListAsync());
 
         [HttpPost("departments")]
-        public async Task<ActionResult<Department>> CreateDepartment(Department department)
+        public async Task<ActionResult<Department>> CreateDepartment(Department dept)
         {
-            _context.Departments.Add(department);
+            _context.Departments.Add(dept);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetDepartments), new { id = department.Id }, department);
+            return CreatedAtAction(nameof(GetDepartments), new { id = dept.Id }, dept);
         }
 
         [HttpPut("departments/{id}")]
-        public async Task<IActionResult> UpdateDepartment(int id, Department updatedDepartment)
+        public async Task<IActionResult> UpdateDepartment(int id, Department updated)
         {
-            var department = await _context.Departments.FindAsync(id);
-            if (department == null) return NotFound();
-
-            department.Name = updatedDepartment.Name;
+            var dept = await _context.Departments.FindAsync(id);
+            if (dept == null) return NotFound();
+            dept.Name = updated.Name;
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -74,65 +124,32 @@ namespace TaskManagerServer.Controllers
         [HttpDelete("departments/{id}")]
         public async Task<IActionResult> DeleteDepartment(int id)
         {
-            var department = await _context.Departments.FindAsync(id);
-            if (department == null) return NotFound();
-
-            _context.Departments.Remove(department);
+            var dept = await _context.Departments.FindAsync(id);
+            if (dept == null) return NotFound();
+            _context.Departments.Remove(dept);
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // Управление должностями
-
+        // POSITIONS
         [HttpGet("positions")]
         public async Task<ActionResult<IEnumerable<Position>>> GetPositions()
-        {
-            return await _context.Positions.ToListAsync();
-        }
+            => Ok(await _context.Positions.ToListAsync());
 
         [HttpPost("positions")]
-        public async Task<ActionResult<Position>> CreatePosition(Position position)
+        public async Task<ActionResult<Position>> CreatePosition(Position pos)
         {
-            Console.WriteLine($"→ Получили Name: '{position?.Name}'");
-            if (!ModelState.IsValid)
-            {
-                foreach (var err in ModelState.Values.SelectMany(v => v.Errors))
-                    Console.WriteLine("Validation error: " + err.ErrorMessage);
-                return BadRequest(ModelState);
-            }
-            if (!ModelState.IsValid)
-            {
-                // Логируем ошибку и возвращаем подробную информацию клиенту
-                foreach (var err in ModelState.Values.SelectMany(v => v.Errors))
-                    Console.WriteLine("Validation error: " + err.ErrorMessage);
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                // Добавление должности в базу данных
-                _context.Positions.Add(position);
-                await _context.SaveChangesAsync();
-
-                // Возвращаем созданную должность с HTTP статусом 201 (Created)
-                return CreatedAtAction(nameof(GetPositions), new { id = position.Id }, position);
-            }
-            catch (Exception ex)
-            {
-                // Логируем исключение
-                Console.WriteLine($"Error: {ex.Message}");
-                return StatusCode(500, "Произошла ошибка на сервере");
-            }
-
-
+            _context.Positions.Add(pos);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetPositions), new { id = pos.Id }, pos);
         }
 
         [HttpPut("positions/{id}")]
-        public async Task<IActionResult> UpdatePosition(int id, Position updatedPosition)
+        public async Task<IActionResult> UpdatePosition(int id, Position updated)
         {
-            var position = await _context.Positions.FindAsync(id);
-            if (position == null) return NotFound();
-
-            position.Name = updatedPosition.Name;
+            var pos = await _context.Positions.FindAsync(id);
+            if (pos == null) return NotFound();
+            pos.Name = updated.Name;
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -140,10 +157,9 @@ namespace TaskManagerServer.Controllers
         [HttpDelete("positions/{id}")]
         public async Task<IActionResult> DeletePosition(int id)
         {
-            var position = await _context.Positions.FindAsync(id);
-            if (position == null) return NotFound();
-
-            _context.Positions.Remove(position);
+            var pos = await _context.Positions.FindAsync(id);
+            if (pos == null) return NotFound();
+            _context.Positions.Remove(pos);
             await _context.SaveChangesAsync();
             return NoContent();
         }
