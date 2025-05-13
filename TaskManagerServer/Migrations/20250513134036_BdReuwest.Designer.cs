@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TaskManagerServer;
@@ -11,9 +12,11 @@ using TaskManagerServer;
 namespace TaskManagerServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250513134036_BdReuwest")]
+    partial class BdReuwest
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -173,9 +176,6 @@ namespace TaskManagerServer.Migrations
 
                     b.Property<byte[]>("Avatar")
                         .HasColumnType("bytea");
-
-                    b.Property<string>("AvatarContentType")
-                        .HasColumnType("text");
 
                     b.Property<int?>("DepartmentId")
                         .HasColumnType("integer");
