@@ -86,24 +86,62 @@ export default function UsersAdmin() {
     refresh();
   };
 
-  // Валидация на клиенте
+  // Валидация
   const validate = () => {
     const errs = { fullName: '', email: '', password: '', roleId: '', positionId: '' };
-    if (!form.fullName.trim()) errs.fullName = 'Имя обязательно';
-    if (!form.email.trim()) errs.email = 'Email обязателен';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+
+    const name = form.fullName.trim();
+    if (!name) {
+      errs.fullName = 'Фамилия и имя обязательно';
+    } else {
+      const words = name.split(/\s+/);
+      const invalidChars = /[^A-Za-zА-Яа-яЁё\s]/;
+      const hasDigits = /\d/;
+
+      if (words.length < 2) {
+        errs.fullName = 'Введите минимум два слова';
+      } else if (hasDigits.test(name)) {
+        errs.fullName = 'Фамилия и имя не должны содержать цифры';
+      } else if (invalidChars.test(name)) {
+        errs.fullName = 'Фамилия и имя содержат недопустимые символы';
+      } else if (!words.every(w => /^[А-ЯЁA-Z][а-яёa-z]+$/.test(w))) {
+        errs.fullName = 'Каждое слово должно начинаться с заглавной буквы';
+      }
+    }
+
+    // === Email ===
+    if (!form.email.trim()) {
+      errs.email = 'Email обязателен';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Неверный формат email';
+    }
+
+    // === Пароль ===
+    const password = form.password;
 
     if (!editing) {
-      if (!form.password) errs.password = 'Пароль обязателен';
-      else if (form.password.length < 6)
-      errs.password = 'Пароль должен быть не короче 6 символов';
-    } else if (form.password && form.password.length < 6) {
-      errs.password = 'Пароль должен быть не короче 6 символов';
+      if (!password) {
+        errs.password = 'Пароль обязателен';
+      } else if (password.length < 8) {
+        errs.password = 'Пароль должен быть не короче 8 символов';
+      } else if (!/[A-Z]/.test(password)) {
+        errs.password = 'Пароль должен содержать хотя бы одну заглавную букву';
+      } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
+        errs.password = 'Пароль содержит недопустимые символы.Разрешены только буквы, цифры, _, -, &, $';
+      }
+    } else if (password) {
+      if (password.length < 8) {
+        errs.password = 'Пароль должен быть не короче 8 символов';
+      } else if (!/[A-Z]/.test(password)) {
+        errs.password = 'Пароль должен содержать хотя бы одну заглавную букву';
+      } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
+        errs.password = 'Пароль содержит недопустимые символы.Разрешены только буквы, цифры, _, -, &, $';
+      }
     }
 
     if (!form.roleId) errs.roleId = 'Выберите роль';
     if (!form.positionId) errs.positionId = 'Выберите должность';
+
     setErrors(errs);
     return !Object.values(errs).some(e => e);
   };
@@ -180,7 +218,7 @@ export default function UsersAdmin() {
           <ModalBody>
             {/* Имя */}
             <FormControl mb={3} isRequired isInvalid={!!errors.fullName}>
-              <FormLabel>Имя</FormLabel>
+              <FormLabel>Фамилия и имя</FormLabel>
               <Input
                 value={form.fullName}
                 onChange={e => setForm({ ...form, fullName: e.target.value })}
@@ -200,7 +238,7 @@ export default function UsersAdmin() {
             </FormControl>
 
             {/* Пароль */}
-            <FormControl mb={3} isRequired isInvalid={!!errors.password}>
+            <FormControl mb={3} isRequired={!editing} isInvalid={!!errors.password}>
               <FormLabel>Пароль</FormLabel>
               <Input
                 type="password"
@@ -225,9 +263,9 @@ export default function UsersAdmin() {
               <FormErrorMessage>{errors.roleId}</FormErrorMessage>
             </FormControl>
 
-            {/* Отдел (необязательно) */}
+            {/* Отдел */}
             <FormControl mb={3}>
-              <FormLabel>Отдел (необязательно)</FormLabel>
+              <FormLabel>Отдел</FormLabel>
               <Select
                 placeholder="Без отдела"
                 value={form.departmentId}
