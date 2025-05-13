@@ -17,19 +17,31 @@ export default function UsersAdmin() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [editing, setEditing] = useState(null);
 
+  // Добавили поле login
   const [form, setForm] = useState({
-    fullName: '', email: '', password: '',
-    roleId: '', departmentId: '', positionId: ''
+    fullName: '',
+    login: '',
+    email: '',
+    password: '',
+    roleId: '',
+    departmentId: '',
+    positionId: ''
   });
+
   const [errors, setErrors] = useState({
-    fullName: '', email: '', password: '',
-    roleId: '', positionId: ''
+    fullName: '',
+    login: '',
+    email: '',
+    password: '',
+    roleId: '',
+    positionId: ''
   });
 
   const roles = [
     { value: 3, label: 'Админ' },
     { value: 1, label: 'Работодатель' },
     { value: 2, label: 'Сотрудник' },
+    { value: 4, label: 'Работодатель вышего звена' }
   ];
 
   useEffect(() => {
@@ -61,8 +73,23 @@ export default function UsersAdmin() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ fullName:'', email:'', password:'', roleId:'', departmentId:'', positionId:'' });
-    setErrors({ fullName:'', email:'', password:'', roleId:'', positionId:'' });
+    setForm({
+      fullName: '',
+      login: '',
+      email: '',
+      password: '',
+      roleId: '',
+      departmentId: '',
+      positionId: ''
+    });
+    setErrors({
+      fullName: '',
+      login: '',
+      email: '',
+      password: '',
+      roleId: '',
+      positionId: ''
+    });
     onOpen();
   };
 
@@ -70,13 +97,21 @@ export default function UsersAdmin() {
     setEditing(u);
     setForm({
       fullName: u.name,
-      email: u.email,
+      login:    u.login,       // предзаполняем
+      email:    u.email,
       password: '',
-      roleId: u.roleId.toString(),
+      roleId:   u.roleId.toString(),
       departmentId: u.departmentId?.toString() || '',
-      positionId: u.positionId.toString()
+      positionId:   u.positionId.toString()
     });
-    setErrors({ fullName:'', email:'', password:'', roleId:'', positionId:'' });
+    setErrors({
+      fullName: '',
+      login: '',
+      email: '',
+      password: '',
+      roleId: '',
+      positionId: ''
+    });
     onOpen();
   };
 
@@ -88,62 +123,77 @@ export default function UsersAdmin() {
 
   // Валидация
   const validate = () => {
-    const errs = { fullName: '', email: '', password: '', roleId: '', positionId: '' };
+    const errs = {
+      fullName: '',
+      login: '',
+      email: '',
+      password: '',
+      roleId: '',
+      positionId: ''
+    };
 
+    // Имя
     const name = form.fullName.trim();
     if (!name) {
       errs.fullName = 'Фамилия и имя обязательно';
     } else {
-      const words = name.split(/\s+/);
-      const invalidChars = /[^A-Za-zА-Яа-яЁё\s]/;
-      const hasDigits = /\d/;
+      const words = name.split(/\s+/),
+            invalidChars = /[^A-Za-zА-Яа-яЁё\s]/,
+            hasDigits    = /\d/;
 
       if (words.length < 2) {
         errs.fullName = 'Введите минимум два слова';
       } else if (hasDigits.test(name)) {
-        errs.fullName = 'Фамилия и имя не должны содержать цифры';
+        errs.fullName = 'Не должны содержать цифры';
       } else if (invalidChars.test(name)) {
-        errs.fullName = 'Фамилия и имя содержат недопустимые символы';
+        errs.fullName = 'Содержат недопустимые символы';
       } else if (!words.every(w => /^[А-ЯЁA-Z][а-яёa-z]+$/.test(w))) {
-        errs.fullName = 'Каждое слово должно начинаться с заглавной буквы';
+        errs.fullName = 'Каждое слово с заглавной буквы';
       }
     }
 
-    // === Email ===
+    // Login: обязательный, только буквы, цифры, _
+    if (!form.login.trim()) {
+      errs.login = 'Логин обязателен';
+    } else if (!/^[A-Za-z0-9_]+$/.test(form.login)) {
+      errs.login = 'Только буквы, цифры и подчёркивание';
+    }
+
+    // Email
     if (!form.email.trim()) {
       errs.email = 'Email обязателен';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Неверный формат email';
     }
 
-    // === Пароль ===
+    // Пароль
     const password = form.password;
-
     if (!editing) {
       if (!password) {
         errs.password = 'Пароль обязателен';
       } else if (password.length < 8) {
-        errs.password = 'Пароль должен быть не короче 8 символов';
+        errs.password = 'Минимум 8 символов';
       } else if (!/[A-Z]/.test(password)) {
-        errs.password = 'Пароль должен содержать хотя бы одну заглавную букву';
+        errs.password = 'Хотя бы одна заглавная буква';
       } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
-        errs.password = 'Пароль содержит недопустимые символы.Разрешены только буквы, цифры, _, -, &, $';
+        errs.password = 'Недопустимые символы в пароле';
       }
     } else if (password) {
       if (password.length < 8) {
-        errs.password = 'Пароль должен быть не короче 8 символов';
+        errs.password = 'Минимум 8 символов';
       } else if (!/[A-Z]/.test(password)) {
-        errs.password = 'Пароль должен содержать хотя бы одну заглавную букву';
+        errs.password = 'Хотя бы одна заглавная буква';
       } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
-        errs.password = 'Пароль содержит недопустимые символы.Разрешены только буквы, цифры, _, -, &, $';
+        errs.password = 'Недопустимые символы в пароле';
       }
     }
 
-    if (!form.roleId) errs.roleId = 'Выберите роль';
+    // Роль / Должность
+    if (!form.roleId)     errs.roleId     = 'Выберите роль';
     if (!form.positionId) errs.positionId = 'Выберите должность';
 
     setErrors(errs);
-    return !Object.values(errs).some(e => e);
+    return !Object.values(errs).some(Boolean);
   };
 
   const handleSubmit = async () => {
@@ -151,6 +201,7 @@ export default function UsersAdmin() {
 
     const payload = {
       fullName: form.fullName,
+      login:    form.login,    // отправляем login
       email:    form.email,
       roleId:   Number(form.roleId),
       positionId: Number(form.positionId),
@@ -161,10 +212,11 @@ export default function UsersAdmin() {
     try {
       if (editing) {
         await axios.put(`/api/admin/users/${editing.id}`, payload);
+        toast({ status: 'success', description: 'Пользователь обновлён' });
       } else {
         await axios.post('/api/admin/users', payload);
+        toast({ status: 'success', description: 'Пользователь создан' });
       }
-      toast({ status: 'success', description: editing ? 'Обновлено' : 'Создано' });
       onClose();
       refresh();
     } catch (err) {
@@ -185,14 +237,15 @@ export default function UsersAdmin() {
           <Table variant="simple">
             <Thead>
               <Tr>
-                <Th>Имя</Th><Th>Email</Th><Th>Роль</Th>
-                <Th>Отдел</Th><Th>Должность</Th><Th>Действия с пользователями</Th>
+                <Th>Имя</Th><Th>Login</Th><Th>Email</Th><Th>Роль</Th>
+                <Th>Отдел</Th><Th>Должность</Th><Th>Действия</Th>
               </Tr>
             </Thead>
             <Tbody>
               {users.map(u => (
                 <Tr key={u.id}>
                   <Td>{u.name}</Td>
+                  <Td>{u.login}</Td>
                   <Td>{u.email}</Td>
                   <Td>{u.roleName}</Td>
                   <Td>{u.departmentName || '—'}</Td>
@@ -224,6 +277,16 @@ export default function UsersAdmin() {
                 onChange={e => setForm({ ...form, fullName: e.target.value })}
               />
               <FormErrorMessage>{errors.fullName}</FormErrorMessage>
+            </FormControl>
+
+            {/* Login */}
+            <FormControl mb={3} isRequired isInvalid={!!errors.login}>
+              <FormLabel>Login</FormLabel>
+              <Input
+                value={form.login}
+                onChange={e => setForm({ ...form, login: e.target.value })}
+              />
+              <FormErrorMessage>{errors.login}</FormErrorMessage>
             </FormControl>
 
             {/* Email */}

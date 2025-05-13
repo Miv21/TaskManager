@@ -1,23 +1,41 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 import AppLayout from './components/AppLayout';
 import AdminPanel from './pages/AdminPanel';
 import TasksPage from './pages/TasksPage';
+import LoginPage from './pages/LoginPage';
 
+// Хук для проверки авторизации
+function useAuth() {
+  const token = localStorage.getItem('token');
+  return !!token;
+}
+
+// Компонент защищённого маршрута
+function PrivateRoute() {
+  const isAuth = useAuth();
+  return isAuth ? <Outlet /> : <Navigate to="/login" replace />;
+}
 
 function App() {
   return (
     <Routes>
-      {/* Весь UI обёрнут в общий Layout */}
-      <Route path="/" element={<AppLayout />}>
-        {/* по умолчанию редиректим куда-нибудь */}
-        <Route index element={<Navigate to="/tasks" replace />} />
-        <Route path="admin" element={<AdminPanel />} />
-        <Route path="tasks" element={<TasksPage />} />
+      {/* Публичный маршрут логина */}
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Все, что внутри этого блока — зашито, требует авторизации */}
+      <Route element={<PrivateRoute />}>
+        {/* Общий лэйаут, в котором будут AdminPanel и TasksPage */}
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<Navigate to="/tasks" replace />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="admin" element={<AdminPanel />} />
+        </Route>
       </Route>
-      {/* на случай 404 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+
+      {/* Фоллбек на всё остальное */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
