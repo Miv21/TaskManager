@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Button, Table, Thead, Tbody, Tr, Th, Td, Spinner,
   useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalCloseButton, ModalBody, ModalFooter, FormControl,
-  FormLabel, Input, Select, FormErrorMessage, useToast
+  FormLabel, Input, Select, FormErrorMessage, useToast,
+  InputGroup, InputRightElement, IconButton
 } from '@chakra-ui/react';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
 export default function UsersAdmin() {
@@ -16,8 +18,9 @@ export default function UsersAdmin() {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [editing, setEditing] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordRef = useRef(null);
 
-  // Добавили поле login
   const [form, setForm] = useState({
     fullName: '',
     login: '',
@@ -62,7 +65,7 @@ export default function UsersAdmin() {
       }
     }
     fetchAll();
-  }, []);
+  }, [toast]);
 
   const refresh = async () => {
     setLoading(true);
@@ -73,6 +76,7 @@ export default function UsersAdmin() {
 
   const openCreate = () => {
     setEditing(null);
+    setShowPassword(false);
     setForm({
       fullName: '',
       login: '',
@@ -95,14 +99,15 @@ export default function UsersAdmin() {
 
   const openEdit = (u) => {
     setEditing(u);
+    setShowPassword(false);
     setForm({
       fullName: u.name,
-      login:    u.login,       // предзаполняем
-      email:    u.email,
+      login: u.login,
+      email: u.email,
       password: '',
-      roleId:   u.roleId.toString(),
+      roleId: u.roleId.toString(),
       departmentId: u.departmentId?.toString() || '',
-      positionId:   u.positionId.toString()
+      positionId: u.positionId.toString()
     });
     setErrors({
       fullName: '',
@@ -121,7 +126,6 @@ export default function UsersAdmin() {
     refresh();
   };
 
-  // Валидация
   const validate = () => {
     const errs = {
       fullName: '',
@@ -132,14 +136,13 @@ export default function UsersAdmin() {
       positionId: ''
     };
 
-    // Имя
     const name = form.fullName.trim();
     if (!name) {
       errs.fullName = 'Фамилия и имя обязательно';
     } else {
       const words = name.split(/\s+/),
-            invalidChars = /[^A-Za-zА-Яа-яЁё\s]/,
-            hasDigits    = /\d/;
+        invalidChars = /[^A-Za-zА-Яа-яЁё\s]/,
+        hasDigits = /\d/;
 
       if (words.length < 2) {
         errs.fullName = 'Введите минимум два слова';
@@ -152,21 +155,18 @@ export default function UsersAdmin() {
       }
     }
 
-    // Login: обязательный, только буквы, цифры, _
     if (!form.login.trim()) {
       errs.login = 'Логин обязателен';
     } else if (!/^[A-Za-z0-9_]+$/.test(form.login)) {
       errs.login = 'Только буквы, цифры и подчёркивание';
     }
 
-    // Email
     if (!form.email.trim()) {
       errs.email = 'Email обязателен';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Неверный формат email';
     }
 
-    // Пароль
     const password = form.password;
     if (!editing) {
       if (!password) {
@@ -188,8 +188,7 @@ export default function UsersAdmin() {
       }
     }
 
-    // Роль / Должность
-    if (!form.roleId)     errs.roleId     = 'Выберите роль';
+    if (!form.roleId) errs.roleId = 'Выберите роль';
     if (!form.positionId) errs.positionId = 'Выберите должность';
 
     setErrors(errs);
@@ -201,9 +200,9 @@ export default function UsersAdmin() {
 
     const payload = {
       fullName: form.fullName,
-      login:    form.login,    // отправляем login
-      email:    form.email,
-      roleId:   Number(form.roleId),
+      login: form.login,
+      email: form.email,
+      roleId: Number(form.roleId),
       positionId: Number(form.positionId),
       ...(form.departmentId ? { departmentId: Number(form.departmentId) } : {}),
       ...(form.password ? { password: form.password } : {})
@@ -227,91 +226,99 @@ export default function UsersAdmin() {
 
   return (
     <Box p={4}>
-      <Button colorScheme="blue" mb={4} onClick={openCreate}>
+      <Button
+        colorScheme="blue"
+        mb={4}
+        onClick={openCreate}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+      >
         {editing ? 'Редактировать пользователя' : 'Добавить пользователя'}
       </Button>
 
-      {loading
-        ? <Spinner />
-        : (
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Имя</Th><Th>Login</Th><Th>Email</Th><Th>Роль</Th>
-                <Th>Отдел</Th><Th>Должность</Th><Th>Действия</Th>
+      {loading ? (
+        <Spinner />
+      ) : (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Имя</Th><Th>Login</Th><Th>Email</Th><Th>Роль</Th>
+              <Th>Отдел</Th><Th>Должность</Th><Th>Действия</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {users.map(u => (
+              <Tr key={u.id}>
+                <Td>{u.name}</Td>
+                <Td>{u.login}</Td>
+                <Td>{u.email}</Td>
+                <Td>{u.roleName}</Td>
+                <Td>{u.departmentName || '—'}</Td>
+                <Td>{u.positionName}</Td>
+                <Td>
+                  <Button size="sm" mr={2} onClick={() => openEdit(u)}>✏️</Button>
+                  <Button size="sm" colorScheme="red" onClick={() => handleDelete(u.id)}>🗑️</Button>
+                </Td>
               </Tr>
-            </Thead>
-            <Tbody>
-              {users.map(u => (
-                <Tr key={u.id}>
-                  <Td>{u.name}</Td>
-                  <Td>{u.login}</Td>
-                  <Td>{u.email}</Td>
-                  <Td>{u.roleName}</Td>
-                  <Td>{u.departmentName || '—'}</Td>
-                  <Td>{u.positionName}</Td>
-                  <Td>
-                    <Button size="sm" mr={2} onClick={() => openEdit(u)}>✏️</Button>
-                    <Button size="sm" colorScheme="red" onClick={() => handleDelete(u.id)}>🗑️</Button>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        )
-      }
+            ))}
+          </Tbody>
+        </Table>
+      )}
 
       <Modal isOpen={isOpen} onClose={onClose} size="md">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>
-            {editing ? 'Редактировать пользователя' : 'Новый пользователь'}
-          </ModalHeader>
+          <ModalHeader>{editing ? 'Редактировать пользователя' : 'Новый пользователь'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {/* Имя */}
             <FormControl mb={3} isRequired isInvalid={!!errors.fullName}>
               <FormLabel>Фамилия и имя</FormLabel>
-              <Input
-                value={form.fullName}
-                onChange={e => setForm({ ...form, fullName: e.target.value })}
-              />
+              <Input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
               <FormErrorMessage>{errors.fullName}</FormErrorMessage>
             </FormControl>
 
-            {/* Login */}
             <FormControl mb={3} isRequired isInvalid={!!errors.login}>
               <FormLabel>Login</FormLabel>
-              <Input
-                value={form.login}
-                onChange={e => setForm({ ...form, login: e.target.value })}
-              />
+              <Input value={form.login} onChange={e => setForm({ ...form, login: e.target.value })} />
               <FormErrorMessage>{errors.login}</FormErrorMessage>
             </FormControl>
 
-            {/* Email */}
             <FormControl mb={3} isRequired isInvalid={!!errors.email}>
               <FormLabel>Email</FormLabel>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-              />
+              <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
               <FormErrorMessage>{errors.email}</FormErrorMessage>
             </FormControl>
 
-            {/* Пароль */}
             <FormControl mb={3} isRequired={!editing} isInvalid={!!errors.password}>
               <FormLabel>Пароль</FormLabel>
-              <Input
-                type="password"
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-              />
+              <InputGroup>
+                <Input
+                  ref={passwordRef}
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+                />
+                <InputRightElement>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowPassword(!showPassword);
+                      setTimeout(() => passwordRef.current?.focus(), 0);
+                    }}
+                    icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  />
+                </InputRightElement>
+              </InputGroup>
               <FormErrorMessage>{errors.password}</FormErrorMessage>
             </FormControl>
 
-            {/* Роль */}
             <FormControl mb={3} isRequired isInvalid={!!errors.roleId}>
               <FormLabel>Роль</FormLabel>
               <Select
@@ -326,7 +333,6 @@ export default function UsersAdmin() {
               <FormErrorMessage>{errors.roleId}</FormErrorMessage>
             </FormControl>
 
-            {/* Отдел */}
             <FormControl mb={3}>
               <FormLabel>Отдел</FormLabel>
               <Select
@@ -340,7 +346,6 @@ export default function UsersAdmin() {
               </Select>
             </FormControl>
 
-            {/* Должность */}
             <FormControl mb={3} isRequired isInvalid={!!errors.positionId}>
               <FormLabel>Должность</FormLabel>
               <Select
@@ -357,9 +362,7 @@ export default function UsersAdmin() {
           </ModalBody>
 
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
-              Сохранить
-            </Button>
+            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>Сохранить</Button>
             <Button onClick={onClose}>Отмена</Button>
           </ModalFooter>
         </ModalContent>

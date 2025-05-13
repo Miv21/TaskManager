@@ -3,9 +3,11 @@ import {
   Box,
   Avatar,
   Text,
+  HStack,
   VStack,
   Spinner,
   useToast,
+  Flex,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -14,7 +16,14 @@ export default function UserCard() {
   const toast = useToast();
 
   useEffect(() => {
-    axios.get('/api/me')
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    axios.get('/api/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(res => setUser(res.data))
       .catch(() =>
         toast({
@@ -27,13 +36,12 @@ export default function UserCard() {
   if (!user) {
     return (
       <Box
-        bg="grey"
-        height="fit-content"
+        bg="gray"
         p={4}
         borderRadius="25px"
         boxShadow="0 0 10px rgba(0,0,0,0.1)"
-        width="280px"
-        h="22"
+        width="300px"
+        height="100px"
         display="flex"
         alignItems="center"
         justifyContent="center"
@@ -43,42 +51,32 @@ export default function UserCard() {
     );
   }
 
-  // Собираем data URL для <Avatar>
   const avatarSrc = user.avatarBase64
     ? `data:image/png;base64,${user.avatarBase64}`
     : undefined;
 
   return (
     <Box
-      bg="grey"
-      height="fit-content"
+      bg="gray"
       p={4}
       borderRadius="25px"
       boxShadow="0 0 10px rgba(0,0,0,0.1)"
-      width="280px"
-      h="22"
+      width="300px"
+      height="22%"
+      
     >
-      <VStack spacing={2} align="center">
-        <Avatar
-          size="xl"
-          name={user.name}
-          src={avatarSrc}
-        />
-        <Text fontSize="lg" fontWeight="bold">
-          {user.name}
-        </Text>
-        <Text color="gray.600">
-          @{user.login}
-        </Text>
-        <Text fontSize="sm" color="gray.500">
-          {user.roleName}
-        </Text>
-        {user.departmentName && (
-          <Text fontSize="sm" color="gray.500">
-            {user.departmentName}
+      <Flex align="flex-end" height="40%">
+        <Avatar size="lg" name={user.name} src={avatarSrc} />
+
+        <VStack align="start" spacing={0} ml={4} pb="2px">
+          <Text fontWeight="bold" fontSize="md">
+            {user.name}
           </Text>
-        )}
-      </VStack>
+          <Text fontSize="sm" color="gray.600">
+            @{user.login}
+          </Text>
+        </VStack>
+      </Flex>
     </Box>
   );
 }

@@ -10,17 +10,16 @@ export default function AppLayout() {
       <Flex
         direction="column"
         width="300px"
-        my="10px"                
-        justify="space-between"
-        gap="8px"
+        my="10px"
         ml="5px"
         mr="4px"
+        gap="8px"
+        // УБРАТЬ justify="space-between"
       >
         <Sidebar />
         <UserCard />
       </Flex>
 
-      {/* Основная область */}
       <Box
         flex="1"
         bg="gray"
