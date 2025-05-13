@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using TaskManagerServer.Models;
 
@@ -23,46 +23,30 @@ namespace TaskManagerServer.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == request.Email);
+                .FirstOrDefaultAsync(u => u.Login == request.Login);
 
             if (user == null)
                 return Unauthorized("Invalid credentials");
 
-            var hash = ComputeHash(request.Password);
-
-            if (user.PasswordHash != hash)
+            // здесь у нас хеширование через IPasswordHasher
+            var result = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password);
+            if (result == PasswordVerificationResult.Failed)
                 return Unauthorized("Invalid credentials");
 
-            var token = GenerateJwtToken(user);
-
-            return Ok(new
-            {
-                token,
-                user.Id,
-                user.Name,
-                user.Email,
-                Role = user.Role.Name
-            });
-        }
-
-        private string GenerateJwtToken(User user)
-        {
+            // создаём JWT
             var jwtSettings = _configuration.GetSection("JwtSettings");
-
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.Name)
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role.Name),
+        };
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
@@ -70,21 +54,17 @@ namespace TaskManagerServer.Controllers
                 expires: DateTime.UtcNow.AddHours(2),
                 signingCredentials: creds
             );
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return Ok(new
+            {
+                token = jwt,
+                user.Id,
+                user.Name,
+                user.Login,
+                user.Email,
+                role = user.Role.Name
+            });
         }
-
-        private static string ComputeHash(string input)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return Convert.ToBase64String(bytes);
-        }
-    }
-
-    public class LoginRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
     }
 }

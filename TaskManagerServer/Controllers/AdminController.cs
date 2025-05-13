@@ -31,6 +31,7 @@ namespace TaskManagerServer.Controllers
                 {
                     Id = u.Id,
                     Name = u.Name,
+                    Login = u.Login,
                     Email = u.Email,
                     RoleId = u.RoleId,
                     RoleName = u.Role.Name,
@@ -51,16 +52,16 @@ namespace TaskManagerServer.Controllers
             var user = new User
             {
                 Name = dto.FullName,
+                Login = dto.Login,
                 Email = dto.Email,
                 RoleId = dto.RoleId,
                 DepartmentId = dto.DepartmentId,
                 PositionId = dto.PositionId,
-                PasswordHash = _hasher.HashPassword(null!, dto.Password)
+                PasswordHash = _hasher.HashPassword(null!, dto.Password ?? string.Empty)
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
         }
 
@@ -72,16 +73,14 @@ namespace TaskManagerServer.Controllers
             if (user == null) return NotFound();
 
             user.Name = dto.FullName;
+            user.Login = dto.Login;
             user.Email = dto.Email;
             user.RoleId = dto.RoleId;
             user.DepartmentId = dto.DepartmentId;
             user.PositionId = dto.PositionId;
 
-            // Если пароль передан — обновляем его
             if (!string.IsNullOrWhiteSpace(dto.Password))
-            {
                 user.PasswordHash = _hasher.HashPassword(user, dto.Password);
-            }
 
             await _context.SaveChangesAsync();
             return NoContent();
