@@ -6,6 +6,7 @@ using TaskManagerServer.Models;
 
 namespace TaskManagerServer.Controllers
 {
+    //[Authorize(Roles = "Admin")]
     [ApiController]
     [Route("api/admin")]
     public class AdminController : ControllerBase
