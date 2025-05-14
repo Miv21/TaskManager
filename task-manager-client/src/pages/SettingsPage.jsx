@@ -110,9 +110,10 @@ export default function SettingsPage() {
         <VStack align="start" spacing={4} width="300px">
           <Avatar size="xl" name={user.name} src={user.avatarBase64 && `data:image/png;base64,${user.avatarBase64}`} />
           <Heading size="md">{user.name}</Heading>
-          <Text><b>Логин:</b> {user.login}</Text>
+          <Text><b>Логин:</b> @{user.login}</Text>
           <Text><b>Email:</b> {user.email}</Text>
-          <Text><b>Отдел:</b> {user.departmentName || '—'}</Text>
+          <Text><b>Отдел:</b> {user.departmentName || 'Не причислен к отделу'}</Text>
+          <Text><b>Должность:</b>{user.positionName}</Text>
         </VStack>
 
         <Divider orientation="vertical" />
