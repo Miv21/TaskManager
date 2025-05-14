@@ -43,8 +43,9 @@ export default function LoginPage() {
     if (!validate()) return;
     try {
       const res = await axios.post('/api/auth/login', form);
-      const { token } = res.data;
+      const { token, role } = res.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
       navigate('/tasks');
     } catch (err) {
       toast({ status: 'error', description: 'Неверный логин или пароль' });

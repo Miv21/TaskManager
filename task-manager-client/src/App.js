@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout';
 import AdminPanel from './pages/AdminPanel';
 import TasksPage from './pages/TasksPage';
 import LoginPage from './pages/LoginPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Хук для проверки авторизации
 function useAuth() {
@@ -31,6 +32,7 @@ function App() {
           <Route index element={<Navigate to="/tasks" replace />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="admin" element={<AdminPanel />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>
 
