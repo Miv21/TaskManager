@@ -3,26 +3,29 @@ import {
   Box,
   Avatar,
   Text,
-  HStack,
+  Flex,
   VStack,
   Spinner,
   useToast,
-  Flex,
+  Divider,
+  HStack,
+  Button,
+  IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { SunIcon, SettingsIcon } from '@chakra-ui/icons';
+import { useNavigate } from 'react-router-dom';
 
 export default function UserCard() {
   const [user, setUser] = useState(null);
   const toast = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-
     axios.get('/api/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => setUser(res.data))
       .catch(() =>
@@ -36,11 +39,11 @@ export default function UserCard() {
   if (!user) {
     return (
       <Box
-        bg="gray"
+        bg="gray.100"
         p={4}
         borderRadius="25px"
         boxShadow="0 0 10px rgba(0,0,0,0.1)"
-        width="300px"
+        width="280px"
         height="100px"
         display="flex"
         alignItems="center"
@@ -62,21 +65,40 @@ export default function UserCard() {
       borderRadius="25px"
       boxShadow="0 0 10px rgba(0,0,0,0.1)"
       width="300px"
-      height="22%"
-      
+      height="auto"
     >
-      <Flex align="flex-end" height="40%">
+      <Flex align="flex-end" mb={2}>
         <Avatar size="lg" name={user.name} src={avatarSrc} />
-
         <VStack align="start" spacing={0} ml={4} pb="2px">
           <Text fontWeight="bold" fontSize="md">
             {user.name}
           </Text>
           <Text fontSize="sm" color="gray.600">
-            @{user.login}
+            @{user.login} , {user.positionName}
           </Text>
         </VStack>
       </Flex>
+
+      <Divider mb={2} />
+
+      <HStack spacing={4} justify="center" mt="10px">
+        <IconButton 
+          colorScheme="grey"
+          aria-label="Настройки" 
+          icon={<SettingsIcon />} 
+          variant="outline" 
+          size="md"
+          onClick={() => navigate('/settings')}
+        />
+        <IconButton 
+          colorScheme="grey"
+          aria-label="Сменить тему" 
+          icon={<SunIcon />} 
+          variant="outline" 
+          size="md"
+          onClick={() => {/* TODO: переключить тему */}}
+        />
+      </HStack>
     </Box>
   );
 }

@@ -241,7 +241,7 @@ export default function UsersAdmin() {
       </Button>
 
       {loading ? (
-        <Spinner />
+        <Spinner /> 
       ) : (
         <Table variant="simple">
           <Thead>
