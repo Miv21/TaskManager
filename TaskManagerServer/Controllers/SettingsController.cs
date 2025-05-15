@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskManagerServer.Models;
 
-
 namespace TaskManagerServer.Controllers
 {
     [ApiController]
@@ -18,8 +17,9 @@ namespace TaskManagerServer.Controllers
             _hasher = hasher;
         }
 
-        [HttpPut("{id}/login")]
-        public async Task<IActionResult> ChangeLogin(int id, [FromBody] ChangeLoginDto dto)
+        // Новый endpoint для валидации текущего пароля
+        [HttpPost("{id}/validate-password")]
+        public async Task<IActionResult> ValidatePassword(int id, [FromBody] ValidatePasswordDto dto)
         {
             var user = await _ctx.Users.FindAsync(id);
             if (user == null) return NotFound();
@@ -27,6 +27,24 @@ namespace TaskManagerServer.Controllers
             var res = _hasher.VerifyHashedPassword(user, user.PasswordHash, dto.CurrentPassword);
             if (res == PasswordVerificationResult.Failed)
                 return BadRequest("Неверный текущий пароль");
+
+            return Ok();
+        }
+
+        [HttpPut("{id}/login")]
+        public async Task<IActionResult> ChangeLogin(int id, [FromBody] ChangeLoginDto dto)
+        {
+            var user = await _ctx.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            // пароль уже проверён на предыдущем шаге, но можем перепроверить
+            var res = _hasher.VerifyHashedPassword(user, user.PasswordHash, dto.CurrentPassword);
+            if (res == PasswordVerificationResult.Failed)
+                return BadRequest("Неверный текущий пароль");
+
+            // проверка уникальности
+            if (_ctx.Users.Any(u => u.Login == dto.NewLogin && u.Id != id))
+                return BadRequest("Логин уже занят");
 
             user.Login = dto.NewLogin;
             await _ctx.SaveChangesAsync();
@@ -47,5 +65,23 @@ namespace TaskManagerServer.Controllers
             await _ctx.SaveChangesAsync();
             return NoContent();
         }
+    }
+
+    // DTO для validate-password
+    public class ValidatePasswordDto
+    {
+        public string CurrentPassword { get; set; } = "";
+    }
+
+    public class ChangeLoginDto
+    {
+        public string CurrentPassword { get; set; } = "";
+        public string NewLogin { get; set; } = "";
+    }
+
+    public class ChangePasswordDto
+    {
+        public string CurrentPassword { get; set; } = "";
+        public string NewPassword { get; set; } = "";
     }
 }
