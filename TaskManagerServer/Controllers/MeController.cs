@@ -53,7 +53,9 @@ namespace TaskManagerServer.Controllers
                 id = u.Id,
                 name = u.Name,
                 login = u.Login,
+                email = u.Email,
                 positionName = u.Position.Name,
+                departmentName = u.Department?.Name,
                 avatarBase64     
             });
         }
