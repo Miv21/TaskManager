@@ -30,11 +30,8 @@ export default function SettingsPage() {
   const [passErr, setPassErr] = useState("");
 
   const currentRef = useRef();
-  const newRef = useRef();
   const loginRef = useRef();
   const passwordRef = useRef();
-  const loginButtonRef = useRef();
-  const passButtonRef = useRef();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -48,6 +45,8 @@ export default function SettingsPage() {
     if (step === 2) {
       if (loginModal && loginRef.current) loginRef.current.focus();
       if (passModal && passwordRef.current) passwordRef.current.focus();
+    } else if (loginModal || passModal) {
+      if (currentRef.current) currentRef.current.focus();
     }
   }, [step, loginModal, passModal]);
 
@@ -60,36 +59,37 @@ export default function SettingsPage() {
     setCurrentPassword("");
     setCurErr("");
 
-    setTimeout(() => {
-      if (type === "login") {
-        setNewLogin("");
-        setLoginErr("");
-        setLoginModal(true);
-      } else {
-        setNewPassword("");
-        setPassErr("");
-        setPassModal(true);
-      }
-    }, 0);
+    if (type === "login") {
+      setNewLogin("");
+      setLoginErr("");
+      setLoginModal(true);
+    } else {
+      setNewPassword("");
+      setPassErr("");
+      setPassModal(true);
+    }
   };
 
   const closeLoginModal = () => {
     setLoginModal(false);
     setStep(1);
-    if (loginButtonRef.current) loginButtonRef.current.blur();
   };
 
   const closePassModal = () => {
     setPassModal(false);
     setStep(1);
-    if (passButtonRef.current) passButtonRef.current.blur();
   };
 
   const handleKeyDown = (e, action) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
     action();
-    e.target.blur();
+  };
+
+  const handleButtonKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+    }
   };
 
   const checkCurrent = async () => {
@@ -170,17 +170,32 @@ export default function SettingsPage() {
       <Flex direction="column" gap={4}>
         <Flex align="center" gap={4}>
           <Text whiteSpace="nowrap">Сменить логин:</Text>
-          <Button ref={loginButtonRef} onClick={() => openModal("login")}>Начать</Button>
+          <Button 
+            onClick={() => openModal("login")}
+            onKeyDown={handleButtonKeyDown}
+          >
+            Начать
+          </Button>
         </Flex>
         <Divider />
         <Flex align="center" gap={4}>
           <Text whiteSpace="nowrap">Сменить пароль:</Text>
-          <Button ref={passButtonRef} onClick={() => openModal("password")}>Начать</Button>
+          <Button 
+            onClick={() => openModal("password")}
+            onKeyDown={handleButtonKeyDown}
+          >
+            Начать
+          </Button>
         </Flex>
       </Flex>
 
       {/* Модалка логина */}
-      <Modal isOpen={loginModal} onClose={closeLoginModal} isCentered>
+      <Modal 
+        isOpen={loginModal} 
+        onClose={closeLoginModal} 
+        isCentered
+        initialFocusRef={step === 1 ? currentRef : loginRef}
+      >
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Сменить логин</ModalHeader>
@@ -230,7 +245,12 @@ export default function SettingsPage() {
       </Modal>
 
       {/* Модалка пароля */}
-      <Modal isOpen={passModal} onClose={closePassModal} isCentered>
+      <Modal 
+        isOpen={passModal} 
+        onClose={closePassModal} 
+        isCentered
+        initialFocusRef={step === 1 ? currentRef : passwordRef}
+      >
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Сменить пароль</ModalHeader>
@@ -241,6 +261,7 @@ export default function SettingsPage() {
                 <FormLabel>Текущий пароль</FormLabel>
                 <InputGroup>
                   <Input
+                    ref={currentRef}
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
                     onChange={e => setCurrentPassword(e.target.value)}

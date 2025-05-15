@@ -46,6 +46,7 @@ export default function LoginPage() {
       const { token, role } = res.data;
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       navigate('/tasks');
     } catch (err) {
       toast({ status: 'error', description: 'Неверный логин или пароль' });
@@ -68,8 +69,11 @@ export default function LoginPage() {
           value={form.login}
           onChange={e => setForm({ ...form, login: e.target.value })}
           onKeyDown={handleKeyDown}
+          focusBorderColor={errors.login ? 'red.500' : 'blue.500'}
+          errorBorderColor="red.500"
+          borderColor={errors.login ? 'red.500' : 'gray.200'}
         />
-        <FormErrorMessage>{errors.login}</FormErrorMessage>
+        <FormErrorMessage mt={1} color="red.500">{errors.login}</FormErrorMessage>
       </FormControl>
 
       <FormControl mb={3} isRequired isInvalid={!!errors.password}>
@@ -81,6 +85,9 @@ export default function LoginPage() {
             value={form.password}
             onChange={e => setForm({ ...form, password: e.target.value })}
             onKeyDown={handleKeyDown}
+            focusBorderColor={errors.password ? 'red.500' : 'blue.500'}
+            errorBorderColor="red.500"
+            borderColor={errors.password ? 'red.500' : 'gray.200'}
           />
           <InputRightElement>
             <IconButton
@@ -96,7 +103,7 @@ export default function LoginPage() {
             />
           </InputRightElement>
         </InputGroup>
-        <FormErrorMessage>{errors.password}</FormErrorMessage>
+        <FormErrorMessage mt={1} color="red.500">{errors.password}</FormErrorMessage>
       </FormControl>
 
       <Button colorScheme="blue" w="full" onClick={handleSubmit}>
