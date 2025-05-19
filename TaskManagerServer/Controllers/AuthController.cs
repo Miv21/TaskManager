@@ -62,8 +62,7 @@ namespace TaskManagerServer.Controllers
                 user.Id,
                 user.Name,
                 user.Login,
-                user.Email,
-                role = user.Role.Name
+                user.Email
             });
         }
     }
