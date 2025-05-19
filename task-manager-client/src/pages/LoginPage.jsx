@@ -6,6 +6,7 @@ import {
 import axios from 'axios';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ login: '', password: '' });
@@ -14,16 +15,15 @@ export default function LoginPage() {
   const passwordRef = useRef(null); 
   const toast = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();  // достаем функцию login из контекста
 
   const validate = () => {
     const errs = { login: '', password: '' };
-
     if (!form.login.trim()) {
       errs.login = 'Логин обязателен';
     } else if (!/^[A-Za-z0-9_]+$/.test(form.login)) {
       errs.login = 'Только буквы, цифры и подчёркивание';
     }
-
     const password = form.password;
     if (!password) {
       errs.password = 'Пароль обязателен';
@@ -34,7 +34,6 @@ export default function LoginPage() {
     } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
       errs.password = 'Недопустимые символы в пароле';
     }
-
     setErrors(errs);
     return !Object.values(errs).some(Boolean);
   };
@@ -43,9 +42,9 @@ export default function LoginPage() {
     if (!validate()) return;
     try {
       const res = await axios.post('/api/auth/login', form);
-      const { token, role } = res.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('role', role);
+      const { token } = res.data;
+      // вызываем login из контекста, чтобы обновить состояние
+      login(token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       navigate('/tasks');
     } catch (err) {
