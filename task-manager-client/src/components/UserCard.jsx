@@ -9,7 +9,6 @@ import {
   useToast,
   Divider,
   HStack,
-  Button,
   IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
@@ -102,7 +101,7 @@ export default function UserCard() {
           bg="gray"
           _hover={{ bg: "gray.600", color: "white" }}
           _active={{ bg: "gray.700", color: "whiteAlpha.900" }}
-          transition="background-color 0.2s, color 0.2s"
+          transition="background-color 0.4s, color 0.4s"
           onClick={() => {
             // TODO: переключить тему
           }}

@@ -4,8 +4,8 @@ import {
   FormLabel, Input, InputGroup, InputRightElement,
   FormErrorMessage, VStack, Spinner, useToast, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody,
-  Box
+  ModalCloseButton, ModalBody
+
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -174,7 +174,7 @@ export default function SettingsPage() {
 
       <Divider orientation="vertical" />
 
-      <VStack align="stretch" spacing={4}>
+      <VStack align="stretch" spacing={4} >
         <Flex align="center" justify="space-between">
           <Text whiteSpace="nowrap" mr={4}>Сменить логин:</Text>
           <Button onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown}>
@@ -212,6 +212,8 @@ export default function SettingsPage() {
                     value={currentPassword}
                     onChange={e => setCurrentPassword(e.target.value)}
                     onKeyDown={e => handleKeyDown(e, checkCurrent)}
+                    focusBorderColor={curErr ? "red.500" : "blue.500"}
+                    errorBorderColor="red.500"
                   />
                   <InputRightElement>
                     <Button
@@ -236,6 +238,8 @@ export default function SettingsPage() {
                   value={newLogin}
                   onChange={e => setNewLogin(e.target.value)}
                   onKeyDown={e => handleKeyDown(e, submitLogin)}
+                  focusBorderColor={curErr ? "red.500" : "blue.500"}
+                  errorBorderColor="red.500"
                 />
                 <FormErrorMessage>{loginErr}</FormErrorMessage>
                 <Button mt={4} onClick={submitLogin}>Сохранить</Button>
@@ -267,6 +271,8 @@ export default function SettingsPage() {
                     value={currentPassword}
                     onChange={e => setCurrentPassword(e.target.value)}
                     onKeyDown={e => handleKeyDown(e, checkCurrent)}
+                    focusBorderColor={curErr ? "red.500" : "blue.500"}
+                    errorBorderColor="red.500"
                   />
                   <InputRightElement>
                     <Button
@@ -293,6 +299,8 @@ export default function SettingsPage() {
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     onKeyDown={e => handleKeyDown(e, submitPassword)}
+                    focusBorderColor={curErr ? "red.500" : "blue.500"}
+                    errorBorderColor="red.500"
                   />
                   <InputRightElement>
                     <Button

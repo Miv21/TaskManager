@@ -1,10 +1,11 @@
 import React from 'react';
 import { Box, VStack, Button } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Sidebar() {
   const navigate = useNavigate();
-  const role = localStorage.getItem('role');
+  const { user } = useAuth();
 
   return (
     <Box 
@@ -15,9 +16,9 @@ export default function Sidebar() {
       boxShadow="0 0 10px rgba(0, 0, 0, 0.1)" 
     >
       <VStack spacing={4} align="stretch">
-        <Button  onClick={() => navigate('/tasks')}>Карточки</Button>
-        {role === 'Admin' && (
-          <Button  onClick={() => navigate('/admin')}>
+        <Button onClick={() => navigate('/tasks')}>Карточки</Button>
+        {user?.role === 'Admin' && (
+          <Button onClick={() => navigate('/admin')}>
             Админ‑панель
           </Button>
         )}
