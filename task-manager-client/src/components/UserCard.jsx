@@ -82,21 +82,30 @@ export default function UserCard() {
       <Divider mb={2} />
 
       <HStack spacing={4} justify="center" mt="10px">
-        <IconButton 
-          colorScheme="grey"
-          aria-label="Настройки" 
-          icon={<SettingsIcon />} 
-          variant="outline" 
+        <IconButton
+          aria-label="Настройки"
+          icon={<SettingsIcon />}
+          variant="ghost"
           size="md"
+          bg="gray"
+          _hover={{ bg: "gray.600", color: "white" }}
+          _active={{ bg: "gray.700", color: "whiteAlpha.900" }}
+          transition="background-color 0.2s, color 0.2s"
           onClick={() => navigate('/settings')}
         />
-        <IconButton 
-          colorScheme="grey"
-          aria-label="Сменить тему" 
-          icon={<SunIcon />} 
-          variant="outline" 
+        <IconButton
+        
+          aria-label="Сменить тему"
+          icon={<SunIcon boxSize="20px" strokeWidth="2.5" color="currentColor" />}
+          variant="ghost"
           size="md"
-          onClick={() => {/* TODO: переключить тему */}}
+          bg="gray"
+          _hover={{ bg: "gray.600", color: "white" }}
+          _active={{ bg: "gray.700", color: "whiteAlpha.900" }}
+          transition="background-color 0.2s, color 0.2s"
+          onClick={() => {
+            // TODO: переключить тему
+          }}
         />
       </HStack>
     </Box>
