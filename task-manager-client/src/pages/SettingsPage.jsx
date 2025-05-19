@@ -4,7 +4,8 @@ import {
   FormLabel, Input, InputGroup, InputRightElement,
   FormErrorMessage, VStack, Spinner, useToast, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody
+  ModalCloseButton, ModalBody,
+  Box
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -153,11 +154,17 @@ export default function SettingsPage() {
 
   return (
     <Flex p={6} gap={8}>
-      <VStack align="start" spacing={4} width="300px">
-        <Avatar size="xl"
-          name={user.name}
-          src={user.avatarBase64 ? `data:image/png;base64,${user.avatarBase64}` : undefined}
-        />
+      <VStack align="start" spacing={4} width="300px" >
+        <Flex align="center" gap={6}>
+          <Avatar
+            size="xl"
+            name={user.name}
+            src={user.avatarBase64 ? `data:image/png;base64,${user.avatarBase64}` : undefined}
+          />
+          <Button size="sm" onClick={() => toast({ description: "Редактирование аватара пока не реализовано", status: "info" })}>
+            Редактировать аватарку
+          </Button>
+        </Flex>
         <Heading size="md">{user.name}</Heading>
         <Text><b>Логин:</b> @{user.login}</Text>
         <Text><b>Email:</b> {user.email}</Text>
@@ -167,27 +174,21 @@ export default function SettingsPage() {
 
       <Divider orientation="vertical" />
 
-      <Flex direction="column" gap={4}>
-        <Flex align="center" gap={4}>
-          <Text whiteSpace="nowrap">Сменить логин:</Text>
-          <Button 
-            onClick={() => openModal("login")}
-            onKeyDown={handleButtonKeyDown}
-          >
+      <VStack align="stretch" spacing={4}>
+        <Flex align="center" justify="space-between">
+          <Text whiteSpace="nowrap" mr={4}>Сменить логин:</Text>
+          <Button onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown}>
             Начать
           </Button>
         </Flex>
         <Divider />
-        <Flex align="center" gap={4}>
-          <Text whiteSpace="nowrap">Сменить пароль:</Text>
-          <Button 
-            onClick={() => openModal("password")}
-            onKeyDown={handleButtonKeyDown}
-          >
+        <Flex align="center" justify="space-between">
+          <Text whiteSpace="nowrap" mr={4}>Сменить пароль:</Text>
+          <Button onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown}>
             Начать
           </Button>
         </Flex>
-      </Flex>
+      </VStack>
 
       {/* Модалка логина */}
       <Modal 
