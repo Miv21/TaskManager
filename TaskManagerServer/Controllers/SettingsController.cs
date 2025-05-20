@@ -65,5 +65,39 @@ namespace TaskManagerServer.Controllers
             await _ctx.SaveChangesAsync();
             return NoContent();
         }
+
+        [HttpPut("{id}/avatar")]
+        public async Task<IActionResult> UpdateAvatar(int id, [FromBody] AvatarDto dto)
+        {
+            var user = await _ctx.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            if (string.IsNullOrWhiteSpace(dto.Base64))
+                return BadRequest("Изображение не передано.");
+
+            try
+            {
+                var parts = dto.Base64.Split(',');
+                var base64Data = parts.Length > 1 ? parts[1] : parts[0];
+
+                user.Avatar = Convert.FromBase64String(base64Data);
+                user.AvatarContentType = GetContentTypeFromBase64(dto.Base64);
+
+                await _ctx.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Ошибка при сохранении аватара: {ex.Message}");
+            }
+        }
+
+        private string GetContentTypeFromBase64(string base64String)
+        {
+            if (base64String.StartsWith("data:image/png")) return "image/png";
+            if (base64String.StartsWith("data:image/jpeg")) return "image/jpeg";
+            if (base64String.StartsWith("data:image/webp")) return "image/webp";
+            return "application/octet-stream";
+        }
     }
 }
