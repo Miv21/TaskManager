@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Flex, Avatar, Heading, Text, Button, FormControl,
   FormLabel, Input, InputGroup, InputRightElement,
   FormErrorMessage, VStack, Spinner, useToast, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody
-
+  ModalCloseButton, ModalBody, Box , 
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../utils/cropImage';
+import { useUser } from '../utils/UserContext';
 
 export default function SettingsPage() {
   const toast = useToast();
@@ -33,6 +35,19 @@ export default function SettingsPage() {
   const currentRef = useRef();
   const loginRef = useRef();
   const passwordRef = useRef();
+
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  
+  const [imageSrc, setImageSrc] = useState(null);
+  const [avatarModal, setAvatarModal] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((_, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -152,6 +167,55 @@ export default function SettingsPage() {
     }
   };
 
+  const onSelectFile = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageSrc(reader.result.toString());
+        setAvatarModal(true);
+      });
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  
+
+  const saveCroppedImage = async () => {
+    try {
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      await axios.put(
+        `/api/users/${user.id}/avatar`,
+        { Base64: croppedImage },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      setUser(u => ({ ...u, avatarBase64: croppedImage.split(',')[1] }));
+      toast({ status: "success", description: "Аватар обновлён" });
+      setAvatarModal(false);
+    } catch (e) {
+      toast({ status: "error", description: "Ошибка при обновлении аватара" });
+    }
+  };
+
+  const SettingsPage = () => {
+    const { user, setUser } = useUser();
+
+    const handleSave = async () => {
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      
+      // отправка изображения на сервер и получение нового URL
+      const updatedUser = {
+        ...user,
+        avatar: croppedImage,
+      };
+
+      setUser(updatedUser); // обновим контекст — автоматически обновится и карточка
+    };
+
+    return (
+      <img src={user?.avatar} alt="Avatar" />
+    );
+  };
+
   return (
     <Flex p={6} gap={8}>
       <VStack align="start" spacing={4} width="300px" >
@@ -159,10 +223,11 @@ export default function SettingsPage() {
           <Avatar
             size="xl"
             name={user.name}
-            src={user.avatarBase64 ? `data:image/png;base64,${user.avatarBase64}` : undefined}
+            src={user.avatarBase64 || undefined}
           />
-          <Button size="sm" onClick={() => toast({ description: "Редактирование аватара пока не реализовано", status: "info" })}>
+          <Button as="label" size="sm" cursor="pointer">
             Редактировать аватарку
+            <input type="file" hidden accept="image/*" onChange={onSelectFile} />
           </Button>
         </Flex>
         <Heading size="md">{user.name}</Heading>
@@ -318,6 +383,33 @@ export default function SettingsPage() {
                 <Button mt={4} onClick={submitPassword}>Сохранить</Button>
               </FormControl>
             )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={avatarModal} onClose={() => setAvatarModal(false)} size="xl" isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Редактировать аватар</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Box position="relative" width="100%" height="400px">
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </Box>
+            <Flex mt={4} justify="flex-end" gap={2}>
+              <Button onClick={() => setAvatarModal(false)}>Отмена</Button>
+              <Button colorScheme="blue" onClick={saveCroppedImage}>Сохранить</Button>
+            </Flex>
           </ModalBody>
         </ModalContent>
       </Modal>
