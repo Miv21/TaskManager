@@ -6,7 +6,6 @@ import {
 import axios from 'axios';
 import { SunIcon, SettingsIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../utils/UserContext';
 
 export default function UserCard() {
   const [user, setUser] = useState(null);
@@ -28,16 +27,7 @@ export default function UserCard() {
       );
   }, []);
 
-  const UserCard = () => {
-    const { user } = useUser();
-
-    return (
-      <div className="user-card">
-        <img src={user?.avatar} alt="User Avatar" />
-        <h3>{user?.name}</h3>
-      </div>
-    );
-  };
+  
 
   if (!user) {
     return (
@@ -69,7 +59,11 @@ export default function UserCard() {
       height="auto"
     >
       <Flex align="flex-end" mb={2}>
-        <Avatar size="lg" name={user.name} src={avatarSrc} />
+        <Avatar 
+          size="lg" 
+          name={user.name} 
+          src={avatarSrc} 
+        />
         <VStack align="start" spacing={0} ml={4} pb="2px">
           <Text fontWeight="bold" fontSize="md">
             {user.name}

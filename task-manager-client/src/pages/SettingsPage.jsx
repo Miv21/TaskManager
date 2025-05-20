@@ -10,7 +10,6 @@ import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
-import { useUser } from '../utils/UserContext';
 
 export default function SettingsPage() {
   const toast = useToast();
@@ -130,6 +129,10 @@ export default function SettingsPage() {
     if (!/^[A-Za-z0-9_]+$/.test(newLogin)) {
       setLoginErr("Только буквы, цифры и подчёркивание");
       return;
+    } 
+    if (newLogin === user.login) {
+    setLoginErr("Новый логин не должен совпадать с текущим");
+    return;
     }
     try {
       await axios.put(
@@ -152,6 +155,10 @@ export default function SettingsPage() {
     }
     if (!/[A-Z]/.test(newPassword)) {
       setPassErr("Нужна заглавная буква");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPassErr("Новый пароль не должен совпадать с текущим");
       return;
     }
     try {
@@ -191,29 +198,11 @@ export default function SettingsPage() {
       setUser(u => ({ ...u, avatarBase64: croppedImage.split(',')[1] }));
       toast({ status: "success", description: "Аватар обновлён" });
       setAvatarModal(false);
+
+      window.location.reload();
     } catch (e) {
       toast({ status: "error", description: "Ошибка при обновлении аватара" });
     }
-  };
-
-  const SettingsPage = () => {
-    const { user, setUser } = useUser();
-
-    const handleSave = async () => {
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      
-      // отправка изображения на сервер и получение нового URL
-      const updatedUser = {
-        ...user,
-        avatar: croppedImage,
-      };
-
-      setUser(updatedUser); // обновим контекст — автоматически обновится и карточка
-    };
-
-    return (
-      <img src={user?.avatar} alt="Avatar" />
-    );
   };
 
   return (
@@ -387,6 +376,7 @@ export default function SettingsPage() {
         </ModalContent>
       </Modal>
 
+      {/* Модалка добавления аватарки */}
       <Modal isOpen={avatarModal} onClose={() => setAvatarModal(false)} size="xl" isCentered>
         <ModalOverlay />
         <ModalContent>
