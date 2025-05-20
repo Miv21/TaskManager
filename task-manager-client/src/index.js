@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { ChakraProvider } from '@chakra-ui/react';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { AuthProvider } from './hooks/useAuth'; // <-- правильный импорт AuthProvider
+import { AuthProvider } from './utils/useAuth'; 
+import { UserProvider } from './utils/UserContext'; 
 
 const container = document.getElementById('root');
 if (!container) {
@@ -15,8 +16,10 @@ root.render(
   <React.StrictMode>
     <ChakraProvider>
       <BrowserRouter>
-        <AuthProvider>  
-          <App />
+        <AuthProvider>
+          <UserProvider> 
+            <App />
+          </UserProvider>
         </AuthProvider>
       </BrowserRouter>
     </ChakraProvider>

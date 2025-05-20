@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, VStack, Button } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../utils/useAuth';
 
 export default function Sidebar() {
   const navigate = useNavigate();

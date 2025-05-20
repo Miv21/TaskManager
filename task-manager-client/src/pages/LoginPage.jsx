@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import {
   Box, Button, Input, FormControl, FormLabel,
-  FormErrorMessage, VStack, Heading, useToast, InputGroup, InputRightElement, IconButton
+  FormErrorMessage,  Heading, useToast, InputGroup, InputRightElement, IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../utils/useAuth';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ login: '', password: '' });
@@ -21,19 +21,11 @@ export default function LoginPage() {
     const errs = { login: '', password: '' };
     if (!form.login.trim()) {
       errs.login = 'Логин обязателен';
-    } else if (!/^[A-Za-z0-9_]+$/.test(form.login)) {
-      errs.login = 'Только буквы, цифры и подчёркивание';
-    }
+    } 
     const password = form.password;
     if (!password) {
       errs.password = 'Пароль обязателен';
-    } else if (password.length < 8) {
-      errs.password = 'Минимум 8 символов';
-    } else if (!/[A-Z]/.test(password)) {
-      errs.password = 'Хотя бы одна заглавная буква';
-    } else if (!/^[A-Za-z0-9_\-&$]+$/.test(password)) {
-      errs.password = 'Недопустимые символы в пароле';
-    }
+    } 
     setErrors(errs);
     return !Object.values(errs).some(Boolean);
   };

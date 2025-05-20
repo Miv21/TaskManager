@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Avatar,
-  Text,
-  Flex,
-  VStack,
-  Spinner,
-  useToast,
-  Divider,
-  HStack,
-  IconButton
+  Box, Avatar, Text, Flex,
+  VStack, Spinner, useToast, Divider, HStack, IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { SunIcon, SettingsIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../utils/UserContext';
 
 export default function UserCard() {
   const [user, setUser] = useState(null);
@@ -35,6 +28,17 @@ export default function UserCard() {
       );
   }, []);
 
+  const UserCard = () => {
+    const { user } = useUser();
+
+    return (
+      <div className="user-card">
+        <img src={user?.avatar} alt="User Avatar" />
+        <h3>{user?.name}</h3>
+      </div>
+    );
+  };
+
   if (!user) {
     return (
       <Box
@@ -53,9 +57,7 @@ export default function UserCard() {
     );
   }
 
-  const avatarSrc = user.avatarBase64
-    ? `data:image/png;base64,${user.avatarBase64}`
-    : undefined;
+  const avatarSrc = user.avatarBase64 || undefined;
 
   return (
     <Box
