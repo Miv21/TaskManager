@@ -66,22 +66,4 @@ namespace TaskManagerServer.Controllers
             return NoContent();
         }
     }
-
-    // DTO для validate-password
-    public class ValidatePasswordDto
-    {
-        public string CurrentPassword { get; set; } = "";
-    }
-
-    public class ChangeLoginDto
-    {
-        public string CurrentPassword { get; set; } = "";
-        public string NewLogin { get; set; } = "";
-    }
-
-    public class ChangePasswordDto
-    {
-        public string CurrentPassword { get; set; } = "";
-        public string NewPassword { get; set; } = "";
-    }
 }
