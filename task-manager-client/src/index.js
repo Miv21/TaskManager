@@ -4,7 +4,6 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './utils/useAuth'; 
-import { UserProvider } from './utils/UserContext'; 
 
 const container = document.getElementById('root');
 if (!container) {
@@ -17,9 +16,7 @@ root.render(
     <ChakraProvider>
       <BrowserRouter>
         <AuthProvider>
-          <UserProvider> 
-            <App />
-          </UserProvider>
+          <App />
         </AuthProvider>
       </BrowserRouter>
     </ChakraProvider>

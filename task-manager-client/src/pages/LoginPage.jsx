@@ -40,7 +40,9 @@ export default function LoginPage() {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       navigate('/tasks');
     } catch (err) {
-      toast({ status: 'error', description: 'Неверный логин или пароль' });
+      if (err.response?.status === 401) {
+        setErrors({ ...errors, login, password: 'Неверный логин или пароль' });
+      }
     }
   };
 
