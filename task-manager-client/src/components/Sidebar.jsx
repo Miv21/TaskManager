@@ -10,7 +10,7 @@ export default function Sidebar() {
   return (
     <Box 
       h="100%" 
-      bg="rgb(115, 113, 113)" 
+      bg="polar.50" 
       p={4}
       borderRadius="25" 
       boxShadow="0 0 10px rgba(0, 0, 0, 0.1)" 

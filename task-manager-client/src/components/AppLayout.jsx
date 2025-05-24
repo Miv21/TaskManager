@@ -14,7 +14,6 @@ export default function AppLayout() {
         ml="5px"
         mr="4px"
         gap="8px"
-        // УБРАТЬ justify="space-between"
       >
         <Sidebar />
         <UserCard />
@@ -22,11 +21,11 @@ export default function AppLayout() {
 
       <Box
         flex="1"
-        bg="gray"
+        bg="polar.50"
         p={4}
         overflowY="auto"
         borderRadius="25"
-        boxShadow="0 0 10px rgba(0, 0, 0, 0.1)"
+        boxShadow="0 0 10px rgba(0, 0, 0, 0.50)"
         my="10px"
         ml="4px"
         mr="5px"

@@ -11,6 +11,8 @@ import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 
+
+
 export default function SettingsPage() {
   const toast = useToast();
   const [user, setUser] = useState(null);
@@ -35,9 +37,6 @@ export default function SettingsPage() {
   const loginRef = useRef();
   const passwordRef = useRef();
 
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  
   const [imageSrc, setImageSrc] = useState(null);
   const [avatarModal, setAvatarModal] = useState(false);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -198,7 +197,7 @@ export default function SettingsPage() {
       setUser(u => ({ ...u, avatarBase64: croppedImage.split(',')[1] }));
       toast({ status: "success", description: "Аватар обновлён" });
       setAvatarModal(false);
-
+ 
       window.location.reload();
     } catch (e) {
       toast({ status: "error", description: "Ошибка при обновлении аватара" });
