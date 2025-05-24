@@ -31,17 +31,7 @@ export default function UserCard() {
 
   if (!user) {
     return (
-      <Box
-        bg="gray.100"
-        p={4}
-        borderRadius="25px"
-        boxShadow="0 0 10px rgba(0,0,0,0.1)"
-        width="280px"
-        height="100px"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
+      <Box>
         <Spinner />
       </Box>
     );
@@ -51,14 +41,14 @@ export default function UserCard() {
 
   return (
     <Box
-      bg="gray"
+      bg="polar.100"
       p={4}
       borderRadius="25px"
       boxShadow="0 0 10px rgba(0,0,0,0.1)"
       width="300px"
       height="auto"
     >
-      <Flex align="flex-end" mb={2}>
+      <Flex align="flex-end" mb="16px">
         <Avatar 
           size="lg" 
           name={user.name} 
@@ -74,18 +64,14 @@ export default function UserCard() {
         </VStack>
       </Flex>
 
-      <Divider mb={2} />
+      <Divider/>
 
-      <HStack spacing={4} justify="center" mt="10px">
+      <HStack spacing={4} justify="center" mt="16px">
         <IconButton
           aria-label="Настройки"
           icon={<SettingsIcon />}
           variant="ghost"
           size="md"
-          bg="gray"
-          _hover={{ bg: "gray.600", color: "white" }}
-          _active={{ bg: "gray.700", color: "whiteAlpha.900" }}
-          transition="background-color 0.2s, color 0.2s"
           onClick={() => navigate('/settings')}
         />
         <IconButton

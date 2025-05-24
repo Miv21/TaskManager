@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Box, Button, Input, FormControl, FormLabel,
-  FormErrorMessage,  Heading, useToast, InputGroup, InputRightElement, IconButton
+  FormErrorMessage,  Heading , InputGroup, InputRightElement, IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({ login: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const passwordRef = useRef(null); 
-  const toast = useToast();
   const navigate = useNavigate();
   const { login } = useAuth();  // достаем функцию login из контекста
 
