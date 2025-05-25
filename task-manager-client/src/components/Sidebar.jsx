@@ -13,12 +13,12 @@ export default function Sidebar() {
       bg="polar.50" 
       p={4}
       borderRadius="25" 
-      boxShadow="0 0 10px rgba(0, 0, 0, 0.1)" 
+      boxShadow= "2px 6px 8px 1px rgba(0, 0, 0, 0.20)" 
     >
-      <VStack spacing={4} align="stretch">
-        <Button onClick={() => navigate('/tasks')}>Карточки</Button>
+      <VStack spacing={4} align="stretch" borderTopWidth="71px" borderTopColor="polar.50">
+        <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" height="50px" onClick={() => navigate('/tasks')}>Карточки</Button>
         {user?.role === 'Admin' && (
-          <Button onClick={() => navigate('/admin')}>
+          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" height="50px" onClick={() => navigate('/admin')}>
             Админ‑панель
           </Button>
         )}

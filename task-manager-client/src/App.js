@@ -25,9 +25,8 @@ function App() {
       {/* Публичный маршрут логина */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Все, что внутри этого блока — зашито, требует авторизации */}
       <Route element={<PrivateRoute />}>
-        {/* Общий лэйаут, в котором будут AdminPanel и TasksPage */}
+        {/* Защищённые маршруты */}
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/tasks" replace />} />
           <Route path="tasks" element={<TasksPage />} />

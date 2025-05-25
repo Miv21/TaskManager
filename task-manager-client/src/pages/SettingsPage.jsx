@@ -213,7 +213,7 @@ export default function SettingsPage() {
             name={user.name}
             src={user.avatarBase64 || undefined}
           />
-          <Button as="label" size="sm" cursor="pointer">
+          <Button as="label" size="sm" cursor="pointer" borderRadius="25" height="45px" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)">
             Редактировать аватарку
             <input type="file" hidden accept="image/*" onChange={onSelectFile} />
           </Button>
@@ -230,14 +230,14 @@ export default function SettingsPage() {
       <VStack align="stretch" spacing={4} >
         <Flex align="center" justify="space-between">
           <Text whiteSpace="nowrap" mr={4}>Сменить логин:</Text>
-          <Button onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown}>
+          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown} >
             Начать
           </Button>
         </Flex>
         <Divider />
         <Flex align="center" justify="space-between">
           <Text whiteSpace="nowrap" mr={4}>Сменить пароль:</Text>
-          <Button onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown}>
+          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown}>
             Начать
           </Button>
         </Flex>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
         initialFocusRef={step === 1 ? currentRef : loginRef}
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="25">
           <ModalHeader>Сменить логин</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -260,6 +260,7 @@ export default function SettingsPage() {
                 <FormLabel>Текущий пароль</FormLabel>
                 <InputGroup>
                   <Input
+                    borderColor="grey"
                     ref={currentRef}
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
@@ -281,12 +282,13 @@ export default function SettingsPage() {
                   </InputRightElement>
                 </InputGroup>
                 <FormErrorMessage>{curErr}</FormErrorMessage>
-                <Button mt={4} onClick={checkCurrent}>Далее</Button>
+                <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" mt={4} onClick={checkCurrent}>Далее</Button>
               </FormControl>
             ) : (
               <FormControl isInvalid={!!loginErr}>
                 <FormLabel>Новый логин</FormLabel>
-                <Input
+                <Input 
+                  borderColor="grey"
                   ref={loginRef}
                   value={newLogin}
                   onChange={e => setNewLogin(e.target.value)}
@@ -295,7 +297,7 @@ export default function SettingsPage() {
                   errorBorderColor="red.500"
                 />
                 <FormErrorMessage>{loginErr}</FormErrorMessage>
-                <Button mt={4} onClick={submitLogin}>Сохранить</Button>
+                <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" mt={4} onClick={submitLogin}>Сохранить</Button>
               </FormControl>
             )}
           </ModalBody>
@@ -310,15 +312,16 @@ export default function SettingsPage() {
         initialFocusRef={step === 1 ? currentRef : passwordRef}
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="25">
           <ModalHeader>Сменить пароль</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             {step === 1 ? (
-              <FormControl isInvalid={!!curErr}>
+              <FormControl  isInvalid={!!curErr}>
                 <FormLabel>Текущий пароль</FormLabel>
                 <InputGroup>
                   <Input
+                    borderColor="grey"
                     ref={currentRef}
                     type={showCurrent ? "text" : "password"}
                     value={currentPassword}
@@ -340,13 +343,14 @@ export default function SettingsPage() {
                   </InputRightElement>
                 </InputGroup>
                 <FormErrorMessage>{curErr}</FormErrorMessage>
-                <Button mt={4} onClick={checkCurrent}>Далее</Button>
+                <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" mt={4} onClick={checkCurrent}>Далее</Button>
               </FormControl>
             ) : (
-              <FormControl isInvalid={!!passErr}>
+              <FormControl  isInvalid={!!passErr}>
                 <FormLabel>Новый пароль</FormLabel>
                 <InputGroup>
                   <Input
+                    borderColor="grey"
                     ref={passwordRef}
                     type={showNew ? "text" : "password"}
                     value={newPassword}
@@ -368,7 +372,7 @@ export default function SettingsPage() {
                   </InputRightElement>
                 </InputGroup>
                 <FormErrorMessage>{passErr}</FormErrorMessage>
-                <Button mt={4} onClick={submitPassword}>Сохранить</Button>
+                <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" mt={4}  onClick={submitPassword}>Сохранить</Button>
               </FormControl>
             )}
           </ModalBody>
@@ -378,7 +382,7 @@ export default function SettingsPage() {
       {/* Модалка добавления аватарки */}
       <Modal isOpen={avatarModal} onClose={() => setAvatarModal(false)} size="xl" isCentered>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="25">
           <ModalHeader>Редактировать аватар</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -396,8 +400,8 @@ export default function SettingsPage() {
               />
             </Box>
             <Flex mt={4} justify="flex-end" gap={2}>
-              <Button onClick={() => setAvatarModal(false)}>Отмена</Button>
-              <Button colorScheme="blue" onClick={saveCroppedImage}>Сохранить</Button>
+              <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.5)" onClick={() => setAvatarModal(false)}>Отмена</Button>
+              <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.5)" onClick={saveCroppedImage}>Сохранить</Button>
             </Flex>
           </ModalBody>
         </ModalContent>

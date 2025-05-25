@@ -71,7 +71,7 @@ export default function PositionsAdmin() {
 
   return (
     <Box p={4}>
-      <Button colorScheme="green" mb={4} onClick={openCreate}>
+      <Button borderRadius="25" height="45px" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" mb={4} onClick={openCreate}>
         Добавить должность
       </Button>
 
@@ -88,8 +88,8 @@ export default function PositionsAdmin() {
                 <Td>{pos.id}</Td>
                 <Td>{pos.name}</Td>
                 <Td>
-                  <Button size="sm" mr={2} onClick={() => openEdit(pos)}>✏️</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => handleDelete(pos.id)}>🗑️</Button>
+                  <Button size="sm" boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.3)" mr={2} onClick={() => openEdit(pos)}>✏️</Button>
+                  <Button size="sm" boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.35)" variant="red" onClick={() => handleDelete(pos.id)}>🗑️</Button>
                 </Td>
               </Tr>
             ))}
@@ -99,24 +99,25 @@ export default function PositionsAdmin() {
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="25">
           <ModalHeader>{editing ? 'Редактировать должность' : 'Новая должность'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
               <FormLabel>Название должности</FormLabel>
               <Input
+                borderColor="grey"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Введите название"
               />
             </FormControl>
           </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="green" mr={3} onClick={handleSave}>
+          <ModalFooter justifyContent="center">
+            <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" variant="modal" mr={3} onClick={handleSave}>
               Сохранить
             </Button>
-            <Button onClick={onClose}>Отмена</Button>
+            <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" onClick={onClose}>Отмена</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
