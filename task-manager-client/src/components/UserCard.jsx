@@ -44,12 +44,13 @@ export default function UserCard() {
       bg="polar.100"
       p={4}
       borderRadius="25px"
-      boxShadow="0 0 10px rgba(0,0,0,0.1)"
+      boxShadow= "2px 6px 8px 1px rgba(0, 0, 0, 0.24)"
       width="300px"
       height="auto"
     >
       <Flex align="flex-end" mb="16px">
-        <Avatar 
+        <Avatar
+          boxShadow= "2px 5px 5px 0px rgba(0, 0, 0, 0.45)"
           size="lg" 
           name={user.name} 
           src={avatarSrc} 
@@ -69,21 +70,27 @@ export default function UserCard() {
       <HStack spacing={4} justify="center" mt="16px">
         <IconButton
           aria-label="Настройки"
-          icon={<SettingsIcon />}
+          icon={<SettingsIcon boxSize="17px" strokeWidth="2.5" color="currentColor" />}
           variant="ghost"
+          boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
           size="md"
+          color="polar.300"
+          _hover={{ bg: "polar.200", color: "polar.100" }}
+          _active={{ bg: "polar.300", color: "polar.100", boxShadow: "0px 0px 0px 0px rgba(0, 0, 0, 0)" }}
+          transition="background-color 0.3s, color 0.3s, box-shadow 0.3s"
           onClick={() => navigate('/settings')}
         />
         <IconButton
         
           aria-label="Сменить тему"
-          icon={<SunIcon boxSize="20px" strokeWidth="2.5" color="currentColor" />}
+          icon={<SunIcon boxSize="22px" strokeWidth="2.5" color="currentColor" />}
           variant="ghost"
+          boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
           size="md"
-          bg="gray"
-          _hover={{ bg: "gray.600", color: "white" }}
-          _active={{ bg: "gray.700", color: "whiteAlpha.900" }}
-          transition="background-color 0.4s, color 0.4s"
+          color="polar.300"
+          _hover={{ bg: "polar.200", color: "polar.100"  }}
+          _active={{ bg: "polar.300", color: "polar.100", boxShadow: "0px 0px 0px 0px rgba(0, 0, 0, 0)" }}
+          transition="background-color 0.3s, color 0.3s, box-shadow 0.3s"
           onClick={() => {
             // TODO: переключить тему
           }}

@@ -25,7 +25,7 @@ export default function AppLayout() {
         p={4}
         overflowY="auto"
         borderRadius="25"
-        boxShadow="0 0 10px rgba(0, 0, 0, 0.50)"
+        boxShadow= "10px 6px 8px 4px rgba(0, 0, 0, 0.24)"
         my="10px"
         ml="4px"
         mr="5px"

@@ -52,7 +52,7 @@ export default function LoginPage() {
   };
 
   return (
-    <Box maxW="md" mx="auto" mt="20" p="8" boxShadow="md" borderRadius="md">
+    <Box maxW="md" mx="auto" mt="20" p="8" boxShadow="md" borderRadius="25">
       <Heading size="lg" mb={6}>Вход</Heading>
 
       <FormControl mb={3} isRequired isInvalid={!!errors.login}>

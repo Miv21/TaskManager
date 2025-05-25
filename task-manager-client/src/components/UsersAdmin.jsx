@@ -227,7 +227,9 @@ export default function UsersAdmin() {
   return (
     <Box p={4}>
       <Button
-        colorScheme="blue"
+        borderRadius="25"
+        height="45px"
+        boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
         mb={4}
         onClick={openCreate}
         onKeyDown={(e) => {
@@ -237,7 +239,7 @@ export default function UsersAdmin() {
           }
         }}
       >
-        {editing ? 'Редактировать пользователя' : 'Добавить пользователя'}
+      Добавить пользователя
       </Button>
 
       {loading ? (
@@ -260,8 +262,8 @@ export default function UsersAdmin() {
                 <Td>{u.departmentName || '—'}</Td>
                 <Td>{u.positionName}</Td>
                 <Td>
-                  <Button size="sm" mr={2} onClick={() => openEdit(u)}>✏️</Button>
-                  <Button size="sm" colorScheme="red" onClick={() => handleDelete(u.id)}>🗑️</Button>
+                  <Button size="sm" boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.3)" mr={2} onClick={() => openEdit(u)}>✏️</Button>
+                  <Button size="sm" boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.35)" variant="red" onClick={() => handleDelete(u.id)}>🗑️</Button>
                 </Td>
               </Tr>
             ))}
@@ -269,27 +271,27 @@ export default function UsersAdmin() {
         </Table>
       )}
 
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal  isOpen={isOpen} onClose={onClose} size="md">
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent borderRadius="25" borderColor="grey">
           <ModalHeader>{editing ? 'Редактировать пользователя' : 'Новый пользователь'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl mb={3} isRequired isInvalid={!!errors.fullName}>
               <FormLabel>Фамилия и имя</FormLabel>
-              <Input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
+              <Input borderColor="grey" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
               <FormErrorMessage>{errors.fullName}</FormErrorMessage>
             </FormControl>
 
             <FormControl mb={3} isRequired isInvalid={!!errors.login}>
               <FormLabel>Login</FormLabel>
-              <Input value={form.login} onChange={e => setForm({ ...form, login: e.target.value })} />
+              <Input borderColor="grey" value={form.login} onChange={e => setForm({ ...form, login: e.target.value })} />
               <FormErrorMessage>{errors.login}</FormErrorMessage>
             </FormControl>
 
             <FormControl mb={3} isRequired isInvalid={!!errors.email}>
               <FormLabel>Email</FormLabel>
-              <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <Input borderColor="grey" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
               <FormErrorMessage>{errors.email}</FormErrorMessage>
             </FormControl>
 
@@ -297,6 +299,7 @@ export default function UsersAdmin() {
               <FormLabel>Пароль</FormLabel>
               <InputGroup>
                 <Input
+                  borderColor="grey"
                   ref={passwordRef}
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
@@ -322,6 +325,7 @@ export default function UsersAdmin() {
             <FormControl mb={3} isRequired isInvalid={!!errors.roleId}>
               <FormLabel>Роль</FormLabel>
               <Select
+                borderColor="grey"
                 placeholder="Выберите роль"
                 value={form.roleId}
                 onChange={e => setForm({ ...form, roleId: e.target.value })}
@@ -336,6 +340,7 @@ export default function UsersAdmin() {
             <FormControl mb={3}>
               <FormLabel>Отдел</FormLabel>
               <Select
+                borderColor="grey"
                 placeholder="Без отдела"
                 value={form.departmentId}
                 onChange={e => setForm({ ...form, departmentId: e.target.value })}
@@ -349,6 +354,7 @@ export default function UsersAdmin() {
             <FormControl mb={3} isRequired isInvalid={!!errors.positionId}>
               <FormLabel>Должность</FormLabel>
               <Select
+                borderColor="grey"
                 placeholder="Выберите должность"
                 value={form.positionId}
                 onChange={e => setForm({ ...form, positionId: e.target.value })}
@@ -361,9 +367,9 @@ export default function UsersAdmin() {
             </FormControl>
           </ModalBody>
 
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>Сохранить</Button>
-            <Button onClick={onClose}>Отмена</Button>
+          <ModalFooter justifyContent="center">
+            <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" variant="modal" mr={3} onClick={handleSubmit}>Сохранить</Button>
+            <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" onClick={onClose}>Отмена</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
