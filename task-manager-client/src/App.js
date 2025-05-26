@@ -1,5 +1,7 @@
 import React from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
+import theme from './whiteTheme';
 
 import AppLayout from './components/AppLayout';
 import AdminPanel from './pages/AdminPanel';
@@ -19,25 +21,33 @@ function PrivateRoute() {
   return isAuth ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
+
+
 function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   return (
-    <Routes>
+    <ChakraProvider theme={isLoginPage ? undefined : theme}>
+      <Routes>
       {/* Публичный маршрут логина */}
-      <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
-      <Route element={<PrivateRoute />}>
-        {/* Защищённые маршруты */}
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<Navigate to="/tasks" replace />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="admin" element={<AdminPanel />} />
-          <Route path="settings" element={<SettingsPage />} />
+        <Route element={<PrivateRoute />}>
+          {/* Защищённые маршруты */}
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Navigate to="/tasks" replace />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="admin" element={<AdminPanel />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
         </Route>
-      </Route>
 
-      {/* Фоллбек на всё остальное */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        {/* Фоллбек на всё остальное */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </ChakraProvider>
+    
   );
 }
 

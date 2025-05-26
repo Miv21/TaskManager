@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Box, Button, Input, FormControl, FormLabel,
-  FormErrorMessage,  Heading , InputGroup, InputRightElement, IconButton
+  FormErrorMessage,  Heading , InputGroup, InputRightElement, IconButton, Flex
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
@@ -52,26 +52,30 @@ export default function LoginPage() {
   };
 
   return (
-    <Box maxW="md" mx="auto" mt="20" p="8" boxShadow="md" borderRadius="25">
-      <Heading size="lg" mb={6}>Вход</Heading>
+    <Box maxW="md" mx="auto" mt="56" p="8" boxShadow="7px 10px 20px 3px rgba(0, 0, 0, 0.16)" borderRadius="25" backgroundColor="#eeecf4">
+      <Heading size="lg" mb={6} display="flex" justifyContent="center">Вход</Heading>
 
       <FormControl mb={3} isRequired isInvalid={!!errors.login}>
         <FormLabel>Логин</FormLabel>
         <Input
+          backgroundColor="rgb(248, 245, 255)"
+          borderRadius="17px"
           value={form.login}
           onChange={e => setForm({ ...form, login: e.target.value })}
           onKeyDown={handleKeyDown}
           focusBorderColor={errors.login ? 'red.500' : 'blue.500'}
           errorBorderColor="red.500"
-          borderColor={errors.login ? 'red.500' : 'gray.200'}
+          borderColor={errors.login ? 'red.500' : 'gray.400'}
         />
         <FormErrorMessage mt={1} color="red.500">{errors.login}</FormErrorMessage>
       </FormControl>
 
-      <FormControl mb={3} isRequired isInvalid={!!errors.password}>
+      <FormControl mb={4} isRequired isInvalid={!!errors.password}>
         <FormLabel>Пароль</FormLabel>
         <InputGroup>
           <Input
+            backgroundColor="rgb(248, 245, 255)"
+            borderRadius="17px"
             ref={passwordRef}
             type={showPassword ? 'text' : 'password'}
             value={form.password}
@@ -79,7 +83,7 @@ export default function LoginPage() {
             onKeyDown={handleKeyDown}
             focusBorderColor={errors.password ? 'red.500' : 'blue.500'}
             errorBorderColor="red.500"
-            borderColor={errors.password ? 'red.500' : 'gray.200'}
+            borderColor={errors.password ? 'red.500' : 'gray.400'}
           />
           <InputRightElement>
             <IconButton
@@ -88,6 +92,7 @@ export default function LoginPage() {
               size="sm"
               onClick={() => {
                 setShowPassword(!showPassword);
+      
                 setTimeout(() => passwordRef.current?.focus(), 0); 
               }}
               icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
@@ -97,10 +102,12 @@ export default function LoginPage() {
         </InputGroup>
         <FormErrorMessage mt={1} color="red.500">{errors.password}</FormErrorMessage>
       </FormControl>
-
-      <Button colorScheme="blue" w="full" onClick={handleSubmit}>
-        Войти
-      </Button>
+      <Flex  justifyContent="center" mt={8}>
+        <Button  borderRadius="17px" colorScheme="blue" w="173px" onClick={handleSubmit}>
+          Войти
+        </Button>
+      </Flex>
+      
     </Box>
   );
 }

@@ -4,7 +4,7 @@ import {
   FormLabel, Input, InputGroup, InputRightElement,
   FormErrorMessage, VStack, Spinner, useToast, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody, Box , 
+  ModalCloseButton, ModalBody, Box 
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const toast = useToast();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState(false);
 
   const [loginModal, setLoginModal] = useState(false);
   const [passModal, setPassModal] = useState(false);
@@ -47,13 +48,6 @@ export default function SettingsPage() {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    axios.get("/api/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => setUser(r.data))
-      .catch(() => toast({ status: "error", description: "Не удалось загрузить профиль" }))
-      .finally(() => setLoading(false));
-  }, [toast]);
 
   useEffect(() => {
     if (step === 2) {
@@ -64,7 +58,18 @@ export default function SettingsPage() {
     }
   }, [step, loginModal, passModal]);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios.get("/api/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => setUser(r.data))
+      .catch(() => {
+        setLoadingError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [toast]);
+
   if (loading) return <Spinner size="xl" />;
+
 
   const openModal = (type) => {
     setShowCurrent(false);
@@ -207,22 +212,30 @@ export default function SettingsPage() {
   return (
     <Flex p={6} gap={8}>
       <VStack align="start" spacing={4} width="300px" >
-        <Flex align="center" gap={6}>
-          <Avatar
-            size="xl"
-            name={user.name}
-            src={user.avatarBase64 || undefined}
-          />
-          <Button as="label" size="sm" cursor="pointer" borderRadius="25" height="45px" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)">
-            Редактировать аватарку
-            <input type="file" hidden accept="image/*" onChange={onSelectFile} />
-          </Button>
-        </Flex>
-        <Heading size="md">{user.name}</Heading>
-        <Text><b>Логин:</b> @{user.login}</Text>
-        <Text><b>Email:</b> {user.email}</Text>
-        <Text><b>Отдел:</b> {user.departmentName || "Не причислен к отделу"}</Text>
-        <Text><b>Должность:</b> {user.positionName}</Text>
+        {loadingError ? (
+          <Text color="red.500" fontSize="lg" mt={4}>
+            Ошибка загрузки данных
+          </Text>
+        ) : (
+          <>
+          <Flex align="center" gap={6}>
+            <Avatar
+              size="xl"
+              name={user.name}
+              src={user.avatarBase64 || undefined}
+            />
+            <Button as="label" size="sm" cursor="pointer" borderRadius="25" height="45px" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" isDisabled={loadingError}>
+              Редактировать аватарку
+              <input type="file" hidden accept="image/*" onChange={onSelectFile} />
+            </Button>
+          </Flex>
+          <Heading size="md">{user.name}</Heading>
+          <Text><b>Логин:</b> @{user.login}</Text>
+          <Text><b>Email:</b> {user.email}</Text>
+          <Text><b>Отдел:</b> {user.departmentName || "Не причислен к отделу"}</Text>
+          <Text><b>Должность:</b> {user.positionName}</Text>
+          </>
+        )}
       </VStack>
 
       <Divider orientation="vertical" />
@@ -230,14 +243,14 @@ export default function SettingsPage() {
       <VStack align="stretch" spacing={4} >
         <Flex align="center" justify="space-between">
           <Text whiteSpace="nowrap" mr={4}>Сменить логин:</Text>
-          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown} >
+          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("login")} onKeyDown={handleButtonKeyDown} isDisabled={ loadingError}>
             Начать
           </Button>
         </Flex>
         <Divider />
         <Flex align="center" justify="space-between">
           <Text whiteSpace="nowrap" mr={4}>Сменить пароль:</Text>
-          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown}>
+          <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown} isDisabled={ loadingError}>
             Начать
           </Button>
         </Flex>
