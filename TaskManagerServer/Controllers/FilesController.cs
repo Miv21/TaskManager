@@ -14,7 +14,7 @@ namespace TaskManagerServer.Controllers
             _storageService = storageService;
         }
 
-        [HttpPost("upload-avatar")]
+        [HttpPost("upload-files")]
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -27,7 +27,7 @@ namespace TaskManagerServer.Controllers
             return Ok(new { fileUrl });
         }
 
-        [HttpDelete("delete-avatar/{fileName}")]
+        [HttpDelete("delete-files/{fileName}")]
         public async Task<IActionResult> DeleteAvatar(string fileName)
         {
             await _storageService.DeleteFileAsync(fileName);
