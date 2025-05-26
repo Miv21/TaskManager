@@ -16,5 +16,8 @@
         public DateTime Deadline { get; set; }
 
         public ICollection<TaskResponse> Responses { get; set; }
+
+        public int? TargetUserId { get; set; }
+        public User? TargetUser { get; set; }
     }
 }
