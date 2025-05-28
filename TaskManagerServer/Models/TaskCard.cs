@@ -3,11 +3,14 @@
     public class TaskCard
     {
         public int Id { get; set; }
+
         public string Title { get; set; } = string.Empty;
+
         public string Description { get; set; } = string.Empty;
 
         public int EmployerId { get; set; }
-        public User Employer { get; set; }
+
+        public User Employer { get; set; } = null!;
 
         public string? FileUrl { get; set; }
 
@@ -15,9 +18,10 @@
 
         public DateTime Deadline { get; set; }
 
-        public ICollection<TaskResponse> Responses { get; set; }
+        public ICollection<TaskResponse> Responses { get; set; } = new List<TaskResponse>();
 
         public int? TargetUserId { get; set; }
+
         public User? TargetUser { get; set; }
     }
 }

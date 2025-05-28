@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using TaskManagerServer.Models;
 using TaskManagerServer.Services;
 
@@ -21,7 +22,7 @@ namespace TaskManagerServer.Controllers
 
         private int GetUserId()
         {
-            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "id");
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 0;
         }
 
@@ -68,11 +69,9 @@ namespace TaskManagerServer.Controllers
                 Description = dto.Description,
                 EmployerId = creator.Id,
                 Deadline = dto.Deadline,
-                FileUrl = dto.FileUrl
+                FileUrl = dto.FileUrl,
+                TargetUserId = dto.TargetUserId
             };
-
-            // Добавь это свойство в модель TaskCard
-            typeof(TaskCard).GetProperty("TargetUserId")?.SetValue(task, dto.TargetUserId);
 
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
@@ -84,9 +83,7 @@ namespace TaskManagerServer.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteTask(int id)
         {
-            var userIdClaim = User.FindFirst("id")?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-                return Unauthorized("Не удалось определить пользователя.");
+            var userId = GetUserId();
 
             var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == id);
 
@@ -113,6 +110,48 @@ namespace TaskManagerServer.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Задание и файл удалены.");
+        }
+
+        [HttpGet("available")]
+        [Authorize]
+        public async Task<IActionResult> GetAvailableUsers()
+        {
+            var currentUserId = GetUserId();
+            var currentUser = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.Department)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            if (currentUser == null)
+                return Unauthorized("Пользователь не найден.");
+
+            IQueryable<User> query;
+
+            if (currentUser.Role.Name == "Employer")
+            {
+                query = _context.Users
+                    .Where(u => u.DepartmentId == currentUser.DepartmentId && u.Id != currentUser.Id);
+            }
+            else if (currentUser.Role.Name == "TopeEmployer")
+            {
+                query = _context.Users
+                    .Where(u => u.Role.Name == "Employer" || u.DepartmentId == null);
+            }
+            else
+            {
+                return Forbid("У вас нет прав для получения списка пользователей.");
+            }
+
+            var users = await query
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    u.Email
+                })
+                .ToListAsync();
+
+            return Ok(users);
         }
     }
 }
