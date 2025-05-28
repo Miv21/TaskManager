@@ -13,7 +13,6 @@ export function AuthProvider({ children }) {
       try {
         const decoded = jwtDecode(token);
         // В JWT роль хранится в поле role или ClaimTypes.Role
-        // Уточните поле в вашем токене, например:
         const role = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
         setUser({ id: decoded.sub, email: decoded.email, role, token });
       } catch {
