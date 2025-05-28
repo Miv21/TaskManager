@@ -122,5 +122,5 @@ export default function DepartmentsAdmin() {
         </ModalContent>
       </Modal>
     </Box>
-);
+  );
 }

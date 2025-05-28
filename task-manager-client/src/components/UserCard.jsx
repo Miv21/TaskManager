@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Avatar, Text, Flex,
-  VStack, Spinner, useToast, Divider, HStack, IconButton
+  VStack, Spinner, Divider, HStack, IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { SunIcon, SettingsIcon } from '@chakra-ui/icons';

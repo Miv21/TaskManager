@@ -8,7 +8,6 @@ import AdminPanel from './pages/AdminPanel';
 import TasksPage from './pages/TasksPage';
 import LoginPage from './pages/LoginPage';
 import SettingsPage from './pages/SettingsPage';
-
 // Хук для проверки авторизации
 function useAuth() {
   const token = localStorage.getItem('token');

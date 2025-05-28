@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const passwordRef = useRef(null); 
   const navigate = useNavigate();
-  const { login } = useAuth();  // достаем функцию login из контекста
+  const { login } = useAuth();
 
   const validate = () => {
     const errs = { login: '', password: '' };
