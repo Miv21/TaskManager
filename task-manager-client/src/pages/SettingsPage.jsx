@@ -264,7 +264,7 @@ export default function SettingsPage() {
         initialFocusRef={step === 1 ? currentRef : loginRef}
       >
         <ModalOverlay />
-        <ModalContent borderRadius="25">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>Сменить логин</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
         initialFocusRef={step === 1 ? currentRef : passwordRef}
       >
         <ModalOverlay />
-        <ModalContent borderRadius="25">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>Сменить пароль</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
@@ -395,7 +395,7 @@ export default function SettingsPage() {
       {/* Модалка добавления аватарки */}
       <Modal isOpen={avatarModal} onClose={() => setAvatarModal(false)} size="xl" isCentered>
         <ModalOverlay />
-        <ModalContent borderRadius="25">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>Редактировать аватар</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>

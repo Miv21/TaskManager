@@ -99,7 +99,7 @@ export default function PositionsAdmin() {
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
-        <ModalContent borderRadius="25">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>{editing ? 'Редактировать должность' : 'Новая должность'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>

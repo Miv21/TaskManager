@@ -7,10 +7,10 @@ import PositionsAdmin from '../components/PositionsAdmin';
 export default function AdminPanel() {
   return (
     <Tabs variant="enclosed" isLazy>
-      <TabList borderColor="gray">  
-        <Tab _selected={{  borderColor: 'gray' }}>Пользователи </Tab>
-        <Tab _selected={{  borderColor: 'gray' }}>Отделы</Tab>
-        <Tab _selected={{  borderColor: 'gray' }}>Должности</Tab>
+      <TabList borderColor="gray.400">  
+        <Tab borderColor="gray.400" _selected={{  borderColor: 'gray.500' }}>Пользователи </Tab>
+        <Tab borderColor="gray.400" _selected={{  borderColor: 'gray.500' }}>Отделы</Tab>
+        <Tab borderColor="gray.400" _selected={{  borderColor: 'gray.500' }}>Должности</Tab>
       </TabList>
 
       <TabPanels>

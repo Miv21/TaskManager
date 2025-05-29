@@ -273,7 +273,7 @@ export default function UsersAdmin() {
 
       <Modal  isOpen={isOpen} onClose={onClose} size="md">
         <ModalOverlay />
-        <ModalContent borderRadius="25" borderColor="grey">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>{editing ? 'Редактировать пользователя' : 'Новый пользователь'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
