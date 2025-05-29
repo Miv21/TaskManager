@@ -99,7 +99,7 @@ export default function DepartmentsAdmin() {
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
-        <ModalContent borderRadius="25">
+        <ModalContent borderRadius="25" backgroundColor="polar.50">
           <ModalHeader>{editing ? 'Редактировать отдел' : 'Новый отдел'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
