@@ -1,4 +1,6 @@
-﻿namespace TaskManagerServer.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TaskManagerServer.Models
 {
     public class TaskCard
     {
@@ -10,7 +12,8 @@
 
         public int EmployerId { get; set; }
 
-        public User Employer { get; set; } = null!;
+        [Required]
+        public User Employer { get; set; }
 
         public string? FileUrl { get; set; }
 
@@ -23,5 +26,6 @@
         public int? TargetUserId { get; set; }
 
         public User? TargetUser { get; set; }
+
     }
 }

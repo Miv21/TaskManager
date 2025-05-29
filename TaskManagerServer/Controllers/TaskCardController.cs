@@ -68,7 +68,8 @@ namespace TaskManagerServer.Controllers
                 Title = dto.Title,
                 Description = dto.Description,
                 EmployerId = creator.Id,
-                Deadline = dto.Deadline,
+                Deadline = DateTime.SpecifyKind(dto.Deadline, DateTimeKind.Local).ToUniversalTime(),
+                CreatedAt = DateTime.UtcNow,
                 FileUrl = dto.FileUrl,
                 TargetUserId = dto.TargetUserId
             };
@@ -152,6 +153,33 @@ namespace TaskManagerServer.Controllers
                 .ToListAsync();
 
             return Ok(users);
+        }
+
+        [HttpGet("card")]
+        [Authorize]
+        public async Task<IActionResult> GetUserTasks()
+        {
+            var userId = GetUserId();
+
+            var tasks = await _context.Tasks
+                .Where(t => t.TargetUserId == userId || t.EmployerId == userId)
+                .Include(t => t.Employer)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.CreatedAt,
+                    t.Deadline,
+                    t.FileUrl,
+                    EmployerName = t.Employer.Name,
+                    IsCreatedByMe = t.EmployerId == userId,
+                    t.EmployerId,           
+                    t.TargetUserId          
+                })
+                .ToListAsync();
+
+            return Ok(tasks);
         }
     }
 }
