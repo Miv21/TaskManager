@@ -85,7 +85,6 @@ namespace TaskManagerServer.Controllers
         public async Task<IActionResult> DeleteTask(int id)
         {
             var userId = GetUserId();
-
             var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == id);
 
             if (task == null)
@@ -160,7 +159,6 @@ namespace TaskManagerServer.Controllers
         public async Task<IActionResult> GetUserTasks()
         {
             var userId = GetUserId();
-
             var tasks = await _context.Tasks
                 .Where(t => t.TargetUserId == userId || t.EmployerId == userId)
                 .Include(t => t.Employer)
@@ -180,6 +178,29 @@ namespace TaskManagerServer.Controllers
                 .ToListAsync();
 
             return Ok(tasks);
+        }
+
+        [HttpPut("update")]
+        [Authorize]
+        public async Task<IActionResult> UpdateTask([FromForm] TaskCardUpdateDto dto)
+        {
+            var task = await _context.Tasks.FindAsync(dto.Id);
+            if (task == null)
+                return NotFound("Задание не найдено.");
+
+            task.Title = dto.Title;
+            task.Description = dto.Description;
+            task.Deadline = dto.Deadline;
+            task.TargetUserId = dto.TargetUserId;
+
+            if (!string.IsNullOrWhiteSpace(dto.FileUrl))
+                task.FileUrl = dto.FileUrl;
+
+            if (!string.IsNullOrEmpty(dto.FileUrl))
+                task.FileUrl = dto.FileUrl;
+
+            await _context.SaveChangesAsync();
+            return Ok();
         }
     }
 }
