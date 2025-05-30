@@ -65,7 +65,7 @@ const theme = extendTheme({
     },
         Divider: {
             baseStyle: {
-                borderColor: "gray",
+                borderColor: "gray.400",
             },
         },
     },
