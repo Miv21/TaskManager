@@ -80,7 +80,7 @@ namespace TaskManagerServer.Controllers
             return Ok(new { taskId = task.Id });
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("delete/{id}")]
         [Authorize]
         public async Task<IActionResult> DeleteTask(int id)
         {
