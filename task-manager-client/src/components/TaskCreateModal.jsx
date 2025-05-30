@@ -163,7 +163,7 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
             </Flex>
           </FormControl>
         </ModalBody>
-        <ModalFooter>
+        <ModalFooter justifyContent="center">
           <Button
             boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.4)"
             variant="modal"
