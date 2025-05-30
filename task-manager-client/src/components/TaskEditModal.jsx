@@ -8,7 +8,7 @@ import { AttachmentIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import { DateTime } from 'luxon';
 
-const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
+const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
   const toast = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -16,7 +16,18 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
   const [file, setFile] = useState(null);
   const [users, setUsers] = useState([]);
   const [targetUserId, setTargetUserId] = useState('');
+  const [originalFileUrl, setOriginalFileUrl] = useState('');
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    if (isOpen && task) {
+      setTitle(task.title);
+      setDescription(task.description);
+      setDeadline(DateTime.fromISO(task.deadline).toISO({ suppressMilliseconds: true }));
+      setTargetUserId(task.targetUserId);
+      setOriginalFileUrl(task.fileUrl || '');
+    }
+  }, [isOpen, task]);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,32 +46,17 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setTitle('');
-      setDescription('');
-      setDeadline('');
-      setFile(null);
-      setTargetUserId('');
+  const getFileNameFromUrl = (url) => {
+    try {
+      return url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : null;
+    } catch {
+      return null;
     }
-  }, [isOpen]);
+  };
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && isOpen) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, title, description, deadline, file, targetUserId]);
-
-  const handleSubmit = async () => {
+  const handleUpdate = async () => {
     const formData = new FormData();
+    formData.append('Id', task.id);
     formData.append('Title', title);
     formData.append('Description', description);
 
@@ -69,44 +65,71 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
     formData.append('Deadline', utcDeadline);
     formData.append('TargetUserId', targetUserId);
 
-    let uploadedFileName = null;
+    let newFileUrl = '';
+    let originalFileWasDeleted = false;
 
     try {
       if (file) {
         const fileForm = new FormData();
         fileForm.append('file', file);
-
         const uploadRes = await axios.post('/api/files/upload-files', fileForm);
-        formData.append('FileUrl', uploadRes.data.fileUrl);
-
-        uploadedFileName = new URL(uploadRes.data.fileUrl).pathname.split('/').pop();
+        newFileUrl = uploadRes.data.fileUrl;
+        formData.append('FileUrl', newFileUrl);
       }
 
-      await axios.post('/api/taskcard/create', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' , Authorization: `Bearer ${token}` }
+      await axios.put('/api/taskcard/update', formData, {
+        headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
       });
 
+      if (file && originalFileUrl) {
+        const fileName = getFileNameFromUrl(originalFileUrl);
+        if (fileName) {
+          await axios.delete(`/api/files/delete-files/${fileName}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          originalFileWasDeleted = true;
+        }
+      }
+
       toast({
-        title: 'Задание создано',
+        title: 'Задание обновлено',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
 
       onClose();
-      onTaskCreated();
+      onTaskUpdated();
 
     } catch (err) {
-      if (uploadedFileName) {
+      if (newFileUrl) {
+        const newFileName = getFileNameFromUrl(newFileUrl);
+        if (newFileName) {
+          await axios.delete(`/api/files/delete-files/${newFileName}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+      }
+
+      if (file && originalFileUrl && originalFileWasDeleted) {
         try {
-          await axios.delete(`/api/files/delete-files/${uploadedFileName}`);
-        } catch (deleteErr) {
-          console.warn('Ошибка при удалении файла после ошибки задания:', deleteErr);
+          const originalFile = await fetch(originalFileUrl).then(res => res.blob());
+          const filename = getFileNameFromUrl(originalFileUrl);
+          const fileToReupload = new File([originalFile], filename, { type: originalFile.type });
+
+          const reuploadForm = new FormData();
+          reuploadForm.append('file', fileToReupload);
+
+          await axios.post('/api/files/upload-files', reuploadForm, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (restoreErr) {
+          console.error('Ошибка восстановления файла:', restoreErr);
         }
       }
 
       toast({
-        title: 'Ошибка при создании задания',
+        title: 'Ошибка при обновлении задания',
         description: err.response?.data || 'Что-то пошло не так.',
         status: 'error',
         duration: 5000,
@@ -119,7 +142,7 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
       <ModalContent borderRadius="25" backgroundColor="polar.50">
-        <ModalHeader>Создание задания</ModalHeader>
+        <ModalHeader>Редактирование задания</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <FormControl mb={4}>
@@ -132,28 +155,33 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Дедлайн</FormLabel>
-            <Input borderColor="grey" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <Input
+              borderColor="grey"
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Пользователь</FormLabel>
-            <Select borderColor="grey" placeholder="Выберите пользователя" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+            <Select borderColor="grey" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
               {users.map(user => (
                 <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
               ))}
             </Select>
           </FormControl>
           <FormControl>
-            <FormLabel>Файл (необязателен)</FormLabel>
+            <FormLabel>Заменить файл (необязательно)</FormLabel>
             <Flex align="center">
               <Input
                 type="file"
                 display="none"
-                id="file-upload"
+                id="file-edit"
                 onChange={(e) => setFile(e.target.files[0])}
               />
               <IconButton
                 as="label"
-                htmlFor="file-upload"
+                htmlFor="file-edit"
                 icon={<AttachmentIcon />}
                 variant="outline"
                 borderColor="gray"
@@ -168,9 +196,9 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
             boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.4)"
             variant="modal"
             mr={3}
-            onClick={handleSubmit}
+            onClick={handleUpdate}
           >
-            Создать
+            Сохранить
           </Button>
           <Button
             boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.4)"
@@ -184,4 +212,4 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
   );
 };
 
-export default TaskCreateModal;
+export default TaskEditModal;

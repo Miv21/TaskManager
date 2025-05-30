@@ -9,6 +9,8 @@ import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
 import TaskCreateModal from '../components/TaskCreateModal';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
+import TaskEditModal from '../components/TaskEditModal';
+
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -19,6 +21,13 @@ const TasksPage = () => {
     onOpen: onCreateOpen,
     onClose: rawOnCreateClose,
   } = useDisclosure();
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure();
+  
+  const [taskToEdit, setTaskToEdit] = useState(null);
 
   const createButtonRef = useRef(null); 
 
@@ -69,6 +78,11 @@ const TasksPage = () => {
   const openTaskDetails = (task) => {
     setSelectedTask(task);
     onOpen();
+  };
+
+  const handleEditClick = (task) => {
+    setTaskToEdit(task);
+    onEditOpen();
   };
 
   const canCreateTask = user?.role === 'Employer' || user?.role === 'TopeEmployer';
@@ -133,9 +147,8 @@ const TasksPage = () => {
                   <Box
                     key={task.id}
                     w="200px"
-                    h="270px"
-                    borderRadius="20px"
-                    bg="white"
+                    h="280px"
+                    borderRadius="25px"
                     boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
                     cursor="pointer"
                     onClick={() => openTaskDetails(task)}
@@ -148,6 +161,7 @@ const TasksPage = () => {
                       transform: 'translateY(-4px)',
                       boxShadow: '0 6px 16px rgba(0, 0, 0, 0.15)',
                     }}
+                    bg="polar.100"
                   >
                     <Box 
                       h="80%" 
@@ -155,10 +169,11 @@ const TasksPage = () => {
                       display="flex" 
                       flexDirection="column"  
                       justifyContent="space-between" 
-                      mt="10px"
+                      mt="2px"
                       border="1px solid"
                       borderColor="gray.300"
-                      borderRadius="25px 25px 15px 15px"
+                      borderRadius="20px 20px 15px 15px"
+                      bg="polar.50"
                     >
                       <Box borderRadius="20px">
                         <Heading
@@ -270,7 +285,7 @@ const TasksPage = () => {
                         boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
                         _hover={{ bg: "polar.200", color: "polar.100" }}
                         _active={{ bg: "polar.300", color: "polar.100", boxShadow: "none" }}
-                        //onClick={() => handleEdit(task)}
+                        onClick={() => handleEditClick(task)}
                       />
                       <IconButton
                         aria-label="Удалить"
@@ -324,6 +339,13 @@ const TasksPage = () => {
         isOpen={isCreateOpen}
         onClose={onCreateClose}
         onTaskCreated={fetchTasks}
+      />
+
+      <TaskEditModal
+        isOpen={isEditOpen}
+        onClose={onEditClose}
+        task={taskToEdit}
+        onTaskUpdated={fetchTasks}
       />
     </Box>
   );
