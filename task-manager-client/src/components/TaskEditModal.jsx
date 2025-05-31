@@ -46,6 +46,12 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setFile(null);
+    }
+}, [isOpen]);
+
   const getFileNameFromUrl = (url) => {
     try {
       return url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : null;
@@ -53,6 +59,8 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
       return null;
     }
   };
+
+  
 
   const handleUpdate = async () => {
     const formData = new FormData();
@@ -151,7 +159,7 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Описание</FormLabel>
-            <Textarea borderColor="grey" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea height="249px"  borderColor="grey" value={description} onChange={(e) => setDescription(e.target.value)} />
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Дедлайн</FormLabel>

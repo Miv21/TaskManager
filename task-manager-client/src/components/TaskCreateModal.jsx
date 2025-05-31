@@ -128,7 +128,7 @@ const TaskCreateModal = ({ isOpen, onClose, onTaskCreated }) => {
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Описание</FormLabel>
-            <Textarea borderColor="grey" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea height="249px" borderColor="grey" value={description} onChange={(e) => setDescription(e.target.value)} />
           </FormControl>
           <FormControl mb={4}>
             <FormLabel>Дедлайн</FormLabel>
