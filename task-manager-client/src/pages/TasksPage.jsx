@@ -98,6 +98,25 @@ const TasksPage = () => {
     }
   };
 
+  const handleDownload = async (id) => {
+    try {
+      const res = await axios.get(`/api/taskcard/file-link/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const fileUrl = res.data.fileUrl;
+
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = ''; // имя файла будет взято из URL
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Ошибка при скачивании файла:", error);
+      alert("Не удалось получить файл.");
+    }
+  };
+
   const handleDelete = async (id) => {
     try {
       await axios.delete(`/api/taskcard/delete/${id}`, {
@@ -127,16 +146,16 @@ const TasksPage = () => {
       </Flex>
 
       <Tabs variant="enclosed">
-        {canCreateTask && (
-          <TabList borderColor="gray.400">
-            <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
-              Мои задания ({myTasks.length})
-            </Tab>
+        <TabList borderColor="gray.400">
+          <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
+            Мои задания ({myTasks.length})
+          </Tab>
+          {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
               Созданные задания ({createdTasks.length})
             </Tab>
-          </TabList>
-        )}
+          )}
+        </TabList>
         <TabPanels>
           <TabPanel>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
@@ -149,7 +168,7 @@ const TasksPage = () => {
                     w="200px"
                     h="280px"
                     borderRadius="25px"
-                    boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+                    boxShadow="4px 7px 12px rgba(0, 0, 0, 0.2)"
                     cursor="pointer"
                     onClick={() => openTaskDetails(task)}
                     transition="all 0.2s"
@@ -159,7 +178,7 @@ const TasksPage = () => {
                     flexDirection="column"
                     _hover={{
                       transform: 'translateY(-4px)',
-                      boxShadow: '0 6px 16px rgba(0, 0, 0, 0.15)',
+                      boxShadow: '4px 6px 16px rgba(0, 0, 0, 0.15)',
                     }}
                     bg="polar.100"
                   >
@@ -170,10 +189,8 @@ const TasksPage = () => {
                       flexDirection="column"  
                       justifyContent="space-between" 
                       mt="2px"
-                      border="1px solid"
-                      borderColor="gray.300"
                       borderRadius="20px 20px 15px 15px"
-                      bg="polar.50"
+                      bg="polar.100"
                     >
                       <Box borderRadius="20px">
                         <Heading
@@ -182,6 +199,7 @@ const TasksPage = () => {
                           textAlign="center"
                           mb={2}
                           noOfLines={2}
+                          px={25}
                         >
                           {task.title}
                         </Heading>
@@ -192,19 +210,20 @@ const TasksPage = () => {
                           marginLeft={10}
                           sx={{
                             display: '-webkit-box',
-                            WebkitLineClamp: '2',
+                            WebkitLineClamp: '7',
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            maxHeight: '50px',
-                            marginLeft: '12px',
+                            maxHeight: '145px',
+                            marginLeft: '7px',
                           }}
                         >
                           {task.description}
                         </Text>
                       </Box>
+                      <Divider/>
                     </Box>
-                    <Text fontSize="xss" color="gray.500" >
+                    <Text fontSize="xss" color="gray.600" mt="10px">
                       Дедлайн: {new Date(task.deadline).toLocaleDateString()}
                     </Text>
                   </Box>
@@ -224,7 +243,7 @@ const TasksPage = () => {
                     w="200px"
                     h="280px"
                     borderRadius="25px"
-                    boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+                    boxShadow="4px 7px 12px rgba(0, 0, 0, 0.2)"
                     transition="all 0.2s"
                     display="flex"
                     justifyContent="center"
@@ -238,10 +257,8 @@ const TasksPage = () => {
                       flexDirection="column"  
                       justifyContent="space-between" 
                       mt="10px"
-                      border="1px solid"
-                      borderColor="gray.300"
                       borderRadius="20px 20px 15px 15px"
-                      bg="polar.50"
+                      bg="polar.100"
                     >
                       <Box >
                         <Heading
@@ -250,6 +267,7 @@ const TasksPage = () => {
                           textAlign="center"
                           mb={2}
                           noOfLines={2}
+                          px={25}
                         >
                           {task.title}
                         </Heading>
@@ -259,28 +277,28 @@ const TasksPage = () => {
                           color="gray.700"
                           sx={{
                             display: '-webkit-box',
-                            WebkitLineClamp: '2',
+                            WebkitLineClamp: '7',
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            maxHeight: '50px',
+                            maxHeight: '145px',
                             marginLeft: '12px',
                           }}
                         >
                           {task.description}
                         </Text>
                       </Box>
+                      <Divider/>
                     </Box>
-                    
-                    <Text fontSize="xss" color="gray.500" >
+                    <Text fontSize="xss" color="gray.600" mt="7px">
                       Дедлайн: {new Date(task.deadline).toLocaleDateString()}
                     </Text>
-                    <Box mt={2} display="flex" gap={20} mb={3}>
+                    <Box mt={2} display="flex" gap={20} mb={3} >
                       <IconButton
+                        bg= "polar.100"
                         aria-label="Редактировать"
                         icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
                         size="sm"
-                        colorScheme="blue"
                         variant="ghost"
                         boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
                         _hover={{ bg: "polar.200", color: "polar.100" }}
@@ -288,10 +306,10 @@ const TasksPage = () => {
                         onClick={() => handleEditClick(task)}
                       />
                       <IconButton
+                        bg= "polar.100"
                         aria-label="Удалить"
                         icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
                         size="sm"
-                        colorScheme="red"
                         variant="ghost"
                         boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
                         _hover={{ bg: "polar.200", color: "polar.100" }}
@@ -310,26 +328,63 @@ const TasksPage = () => {
       {selectedTask && (
         <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
           <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>{selectedTask.title}</ModalHeader>
+          <ModalContent
+            pt={7}
+            width="450px"
+            height="600px"
+            borderRadius="25px"
+            display="flex"
+            flexDirection="column"
+          >
+            <ModalHeader
+              as="h3"
+              textAlign="center"
+              mb={1}
+              px={50}
+            >
+              {selectedTask.title}
+            </ModalHeader>
             <ModalCloseButton />
-            <ModalBody>
-              <Text mb={4}>{selectedTask.description}</Text>
-              {selectedTask.fileUrl && (
+            <ModalBody flex="1">
+              <Box
+                border="2px solid"
+                borderColor="blue.100"
+                borderRadius="20px"
+                height="350px"
+                p={4}
+                overflow="auto"
+              >
+                <Text>{selectedTask.description}</Text>
+              </Box>
+
+              <Flex justify="space-between" mt="16" >
+                {selectedTask.fileUrl ? (
+                  <Button
+                    as="a"
+                    onClick = {() =>handleDownload(selectedTask.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    borderRadius="25"
+                    boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
+                  >
+                    Скачать файл
+                  </Button>
+                ) : (
+                  <Box />
+                )}
+
                 <Button
+                  variant="modal"
                   as="a"
-                  href={selectedTask.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  colorScheme="blue"
-                  mb={4}
+                  borderRadius="25"
+                  boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
+                 isDisabled
                 >
-                  Скачать файл
+                  Ответить
                 </Button>
-              )}
-              <Button colorScheme="green" isDisabled>
-                Ответить
-              </Button>
+              </Flex>
             </ModalBody>
           </ModalContent>
         </Modal>
