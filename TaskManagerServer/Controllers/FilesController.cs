@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TaskManagerServer.Services;
 
+
 namespace TaskManagerServer.Controllers
 {
     [ApiController]
@@ -21,7 +22,7 @@ namespace TaskManagerServer.Controllers
                 return BadRequest("Файл не выбран.");
 
             using var stream = file.OpenReadStream();
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName); // Уникальное имя
+            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName); 
             var fileUrl = await _storageService.UploadFileAsync(fileName, stream);
 
             return Ok(new { fileUrl });

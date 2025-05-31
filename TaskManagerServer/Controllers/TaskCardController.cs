@@ -202,5 +202,20 @@ namespace TaskManagerServer.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+
+        [HttpGet("file-link/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetFileUrl(int id)
+        {
+            var task = await _context.Tasks.FindAsync(id);
+
+            if (task == null)
+                return NotFound("Задание не найдено.");
+
+            if (string.IsNullOrEmpty(task.FileUrl))
+                return NotFound("Файл не прикреплён к заданию.");
+
+            return Ok(new { fileUrl = task.FileUrl });
+        }
     }
 }
