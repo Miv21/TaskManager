@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Box, Heading, Button, SimpleGrid, Text, useDisclosure, Flex, Tabs, TabList, TabPanels,
   Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalBody, ModalCloseButton,
+  ModalBody, ModalCloseButton, FormControl, FormLabel, Textarea,
   Divider, IconButton
 } from '@chakra-ui/react';
 import axios from 'axios';
@@ -90,6 +90,8 @@ const TasksPage = () => {
   const myId = parseInt(user?.id);
   const myTasks = tasks.filter(task => task.targetUserId === myId);
   const createdTasks = tasks.filter(task => task.employerId === myId);
+  const myResponse = [];
+  const responseMyTask = [];
 
   const onCreateClose = () => {
     rawOnCreateClose();
@@ -127,6 +129,20 @@ const TasksPage = () => {
       console.error('Ошибка при удалении задания:', err);
     }
   };
+
+  const {
+    isOpen: isResponseOpen,
+    onOpen: onResponseOpen,
+    onClose: onResponseClose,
+  } = useDisclosure();
+
+  const handleRespondClick = (task) => {
+    setTaskToRespond(task);
+    onResponseOpen();
+  };
+
+
+const [taskToRespond, setTaskToRespond] = useState(null);
   
   return (
     <Box w="100%" minH="90vh" p={2}>
@@ -153,6 +169,14 @@ const TasksPage = () => {
           {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
               Созданные задания ({createdTasks.length})
+            </Tab>
+          )}
+          <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
+            Мои ответы ({myResponse.length})
+          </Tab>
+          {canCreateTask && (
+            <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
+              Ответы на мои задания ({responseMyTask.length})
             </Tab>
           )}
         </TabList>
@@ -322,6 +346,28 @@ const TasksPage = () => {
               )}
             </SimpleGrid>
           </TabPanel>
+          <TabPanel>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+              {myResponse.length === 0 ? (
+                <Text>Вы еще не ответили на ваши задания.</Text>
+              ) : (
+                myResponse.map((task) => (
+                  <Box></Box>
+                ))
+              )}
+            </SimpleGrid>
+          </TabPanel>
+          <TabPanel>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+              {responseMyTask.length === 0 ? (
+                <Text>Вы еще не получили ответы на ваши.</Text>
+              ) : (
+                responseMyTask.map((task) => (
+                  <Box></Box>
+                ))
+              )}
+            </SimpleGrid>
+          </TabPanel>
         </TabPanels>
       </Tabs>
 
@@ -380,11 +426,31 @@ const TasksPage = () => {
                   rel="noopener noreferrer"
                   borderRadius="25"
                   boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
-                 isDisabled
+                  onClick={() => handleRespondClick(selectedTask)}
                 >
                   Ответить
                 </Button>
               </Flex>
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {isResponseOpen && taskToRespond && (
+        <Modal isOpen={isResponseOpen} onClose={onResponseClose} isCentered size="lg">
+          <ModalOverlay />
+          <ModalContent borderRadius="25px" p={5}>
+            <ModalHeader textAlign="center">Ответ на задание</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <FormControl mb={4}>
+                <FormLabel>Ваш ответ</FormLabel>
+                <Textarea height="249px" borderColor="grey" />
+              </FormControl>
+
+              <Button mt={4} width="100%" colorScheme="blue" borderRadius="20px" isDisabled>
+                Отправить (в разработке)
+              </Button>
             </ModalBody>
           </ModalContent>
         </Modal>
