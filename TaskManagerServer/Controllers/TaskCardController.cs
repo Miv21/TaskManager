@@ -217,5 +217,52 @@ namespace TaskManagerServer.Controllers
 
             return Ok(new { fileUrl = task.FileUrl });
         }
+
+        [HttpPost("respond/{id}")]
+        [Authorize]
+        public async Task<IActionResult> RespondToTask([FromForm] TaskResponseCreateDto dto)
+        {
+            var userId = GetUserId();
+
+            var task = await _context.Tasks
+                .Include(t => t.Employer)
+                .FirstOrDefaultAsync(t => t.Id == dto.TaskId);
+
+            if (task == null)
+                return NotFound("Задание не найдено.");
+
+            if (task.TargetUserId != userId)
+                return Forbid("Вы не можете отвечать на это задание.");
+
+            string? responseFileUrl = null;
+            if (dto.File != null)
+            {
+                using var stream = dto.File.OpenReadStream();
+                responseFileUrl = await _storageService.UploadFileAsync(dto.File.FileName, stream);
+            }
+
+            var response = new TaskResponse
+            {
+                TaskId = task.Id,
+                EmployeeId = userId,
+                ResponseText = dto.ResponseText,
+                FileUrl = responseFileUrl,
+                SubmittedAt = DateTime.UtcNow,
+
+                // Копируем данные из TaskCard
+                Title = task.Title,
+                Description = task.Description,
+                Deadline = task.Deadline,
+                OriginalFileUrl = task.FileUrl
+            };
+
+            _context.TaskResponses.Add(response);
+
+            _context.Tasks.Remove(task);
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Ответ отправлен. Задание удалено.");
+        }
     }
 }
