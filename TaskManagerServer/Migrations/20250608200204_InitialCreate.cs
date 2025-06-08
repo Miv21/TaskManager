@@ -4,6 +4,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace TaskManagerServer.Migrations
 {
     /// <inheritdoc />
@@ -58,12 +60,14 @@ namespace TaskManagerServer.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "text", nullable: false),
+                    Login = table.Column<string>(type: "text", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
                     RoleId = table.Column<int>(type: "integer", nullable: false),
-                    DepartmentId = table.Column<int>(type: "integer", nullable: false),
+                    DepartmentId = table.Column<int>(type: "integer", nullable: true),
                     PositionId = table.Column<int>(type: "integer", nullable: false),
-                    Avatar = table.Column<byte[]>(type: "bytea", nullable: true)
+                    Avatar = table.Column<byte[]>(type: "bytea", nullable: true),
+                    AvatarContentType = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -72,8 +76,7 @@ namespace TaskManagerServer.Migrations
                         name: "FK_Users_Departments_DepartmentId",
                         column: x => x.DepartmentId,
                         principalTable: "Departments",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Users_Positions_PositionId",
                         column: x => x.PositionId,
@@ -99,7 +102,8 @@ namespace TaskManagerServer.Migrations
                     EmployerId = table.Column<int>(type: "integer", nullable: false),
                     FileUrl = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Deadline = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Deadline = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TargetUserId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -109,7 +113,13 @@ namespace TaskManagerServer.Migrations
                         column: x => x.EmployerId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Tasks_Users_TargetUserId",
+                        column: x => x.TargetUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -118,27 +128,41 @@ namespace TaskManagerServer.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TaskId = table.Column<int>(type: "integer", nullable: false),
                     EmployeeId = table.Column<int>(type: "integer", nullable: false),
                     ResponseText = table.Column<string>(type: "text", nullable: false),
                     FileUrl = table.Column<string>(type: "text", nullable: true),
-                    SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    Deadline = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    OriginalFileUrl = table.Column<string>(type: "text", nullable: true),
+                    TaskCardId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TaskResponses", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TaskResponses_Tasks_TaskId",
-                        column: x => x.TaskId,
+                        name: "FK_TaskResponses_Tasks_TaskCardId",
+                        column: x => x.TaskCardId,
                         principalTable: "Tasks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_TaskResponses_Users_EmployeeId",
                         column: x => x.EmployeeId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "Id", "Name" },
+                values: new object[,]
+                {
+                    { 1, "Employer" },
+                    { 2, "Employee" },
+                    { 3, "Admin" },
+                    { 4, "TopeEmployer" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -147,14 +171,19 @@ namespace TaskManagerServer.Migrations
                 column: "EmployeeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskResponses_TaskId",
+                name: "IX_TaskResponses_TaskCardId",
                 table: "TaskResponses",
-                column: "TaskId");
+                column: "TaskCardId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_EmployerId",
                 table: "Tasks",
                 column: "EmployerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tasks_TargetUserId",
+                table: "Tasks",
+                column: "TargetUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_DepartmentId",

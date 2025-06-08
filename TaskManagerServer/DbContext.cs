@@ -39,13 +39,6 @@ namespace TaskManagerServer
                 .HasForeignKey(t => t.TargetUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Связь TaskResponse -> TaskCard
-            modelBuilder.Entity<TaskResponse>()
-                .HasOne(r => r.Task)
-                .WithMany(t => t.Responses)
-                .HasForeignKey(r => r.TaskId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             // TaskResponse → Employee
             modelBuilder.Entity<TaskResponse>()
                 .HasOne(r => r.Employee)

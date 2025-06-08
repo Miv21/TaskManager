@@ -243,7 +243,6 @@ namespace TaskManagerServer.Controllers
 
             var response = new TaskResponse
             {
-                TaskId = task.Id,
                 EmployeeId = userId,
                 ResponseText = dto.ResponseText,
                 FileUrl = responseFileUrl,

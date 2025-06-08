@@ -4,9 +4,6 @@
     {
         public int Id { get; set; }
 
-        public int TaskId { get; set; }
-        public TaskCard Task { get; set; }
-
         public int EmployeeId { get; set; }
         public User Employee { get; set; }
 
