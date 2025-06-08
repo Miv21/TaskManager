@@ -3,7 +3,7 @@ import {
   Box, Heading, Button, SimpleGrid, Text, useDisclosure, Flex, Tabs, TabList, TabPanels,
   Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalBody, ModalCloseButton, FormControl, FormLabel, Textarea,
-  Divider, IconButton
+  Divider, IconButton, useToast
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
@@ -16,6 +16,7 @@ const TasksPage = () => {
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
   const {
     isOpen: isCreateOpen,
     onOpen: onCreateOpen,
@@ -42,6 +43,39 @@ const TasksPage = () => {
       setTasks(res.data);
     } catch (error) {
       console.error('Ошибка при получении заданий', error);
+    }
+  };
+
+  const [responseText, setResponseText] = useState('');
+  const [file, setFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitResponse = async (id) => {
+    if (!responseText.trim()) {
+      alert("Ответ не может быть пустым.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('TaskId', taskToRespond.id);
+    formData.append('ResponseText', responseText);
+    if (file) formData.append('File', file);
+
+    try {
+      setIsSubmitting(true);
+      await axios.post(`/api/taskcard/respond/${taskToRespond.id}`, formData, {
+        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data'}
+      });
+      toast({ status: 'success', description: 'Ответ отправлен' });
+      onResponseClose();
+      setResponseText('');
+      setFile(null);
+      fetchTasks(); 
+    } catch (error) {
+      console.error("Ошибка при отправке ответа:", error);
+      toast({ status: 'success', description: 'Не удалось ответить на задание' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -109,13 +143,13 @@ const TasksPage = () => {
 
       const link = document.createElement('a');
       link.href = fileUrl;
-      link.download = ''; // имя файла будет взято из URL
+      link.download = '';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (error) {
       console.error("Ошибка при скачивании файла:", error);
-      alert("Не удалось получить файл.");
+      toast({ status: 'success', description: 'Не удалось скачать файл' });
     }
   };
 
@@ -127,6 +161,7 @@ const TasksPage = () => {
       fetchTasks();
     } catch (err) {
       console.error('Ошибка при удалении задания:', err);
+      toast({ status: 'success', description: 'шибка при удалении задания' });
     }
   };
 
@@ -445,11 +480,32 @@ const [taskToRespond, setTaskToRespond] = useState(null);
             <ModalBody>
               <FormControl mb={4}>
                 <FormLabel>Ваш ответ</FormLabel>
-                <Textarea height="249px" borderColor="grey" />
+                <Textarea
+                  height="180px"
+                  borderColor="grey"
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                />
               </FormControl>
 
-              <Button mt={4} width="100%" colorScheme="blue" borderRadius="20px" isDisabled>
-                Отправить (в разработке)
+              <FormControl mb={4}>
+                <FormLabel>Прикрепить файл</FormLabel>
+                <input
+                  type="file"
+                  onChange={(e) => setFile(e.target.files[0])}
+                  accept="*"
+                />
+              </FormControl>
+
+              <Button
+                mt={4}
+                width="100%"
+                colorScheme="blue"
+                borderRadius="20px"
+                onClick={handleSubmitResponse}
+                isLoading={isSubmitting}
+              >
+                Отправить
               </Button>
             </ModalBody>
           </ModalContent>
