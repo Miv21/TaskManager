@@ -12,8 +12,8 @@ using TaskManagerServer;
 namespace TaskManagerServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250529110054_TascCard")]
-    partial class TascCard
+    [Migration("20250608200204_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -146,10 +146,20 @@ namespace TaskManagerServer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("Deadline")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("EmployeeId")
                         .HasColumnType("integer");
 
                     b.Property<string>("FileUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OriginalFileUrl")
                         .HasColumnType("text");
 
                     b.Property<string>("ResponseText")
@@ -159,14 +169,18 @@ namespace TaskManagerServer.Migrations
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("TaskId")
+                    b.Property<int?>("TaskCardId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId");
 
-                    b.HasIndex("TaskId");
+                    b.HasIndex("TaskCardId");
 
                     b.ToTable("TaskResponses");
                 });
@@ -247,15 +261,11 @@ namespace TaskManagerServer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("TaskManagerServer.Models.TaskCard", "Task")
+                    b.HasOne("TaskManagerServer.Models.TaskCard", null)
                         .WithMany("Responses")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("TaskCardId");
 
                     b.Navigation("Employee");
-
-                    b.Navigation("Task");
                 });
 
             modelBuilder.Entity("TaskManagerServer.Models.User", b =>
