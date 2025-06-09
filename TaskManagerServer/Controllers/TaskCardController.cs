@@ -218,7 +218,7 @@ namespace TaskManagerServer.Controllers
             return Ok(new { fileUrl = task.FileUrl });
         }
 
-        [HttpPost("respond/{id}")]
+        [HttpPost("respond")]
         [Authorize]
         public async Task<IActionResult> RespondToTask([FromForm] TaskResponseCreateDto dto)
         {
@@ -234,18 +234,12 @@ namespace TaskManagerServer.Controllers
             if (task.TargetUserId != userId)
                 return Forbid("Вы не можете отвечать на это задание.");
 
-            string? responseFileUrl = null;
-            if (dto.File != null)
-            {
-                using var stream = dto.File.OpenReadStream();
-                responseFileUrl = await _storageService.UploadFileAsync(dto.File.FileName, stream);
-            }
 
             var response = new TaskResponse
             {
                 EmployeeId = userId,
                 ResponseText = dto.ResponseText,
-                FileUrl = responseFileUrl,
+                FileUrl = dto.FileUrl,
                 SubmittedAt = DateTime.UtcNow,
 
                 // Копируем данные из TaskCard
@@ -256,12 +250,10 @@ namespace TaskManagerServer.Controllers
             };
 
             _context.TaskResponses.Add(response);
-
             _context.Tasks.Remove(task);
-
             await _context.SaveChangesAsync();
 
-            return Ok("Ответ отправлен. Задание удалено.");
+            return Ok();
         }
     }
 }

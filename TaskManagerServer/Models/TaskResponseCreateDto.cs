@@ -4,6 +4,6 @@
     {
         public int TaskId { get; set; }
         public string ResponseText { get; set; } = string.Empty;
-        public IFormFile? File { get; set; }
+        public string? FileUrl { get; set; }
     }
 }
