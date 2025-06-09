@@ -10,6 +10,7 @@ import { useAuth } from '../utils/useAuth';
 import TaskCreateModal from '../components/TaskCreateModal';
 import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import TaskEditModal from '../components/TaskEditModal';
+import { AttachmentIcon } from '@chakra-ui/icons';
 
 
 const TasksPage = () => {
@@ -46,38 +47,87 @@ const TasksPage = () => {
     }
   };
 
+  const [isResponseModalOpen, { onOpen: onOpenResponseModal, onClose: onCloseResponseModal }] = useDisclosure();
   const [responseText, setResponseText] = useState('');
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [responseFile, setResponseFile] = useState(null);
 
-  const handleSubmitResponse = async (id) => {
+  const handleOpenResponseModal = () => {
+    onClose(); 
+    onOpenResponseModal(); 
+  };
+
+  const handleSubmitResponse = async () => {
     if (!responseText.trim()) {
-      alert("Ответ не может быть пустым.");
+      toast({ status: 'error', description: 'Ответ не может быть пустым.' });
       return;
     }
 
-    const formData = new FormData();
-    formData.append('TaskId', taskToRespond.id);
-    formData.append('ResponseText', responseText);
-    if (file) formData.append('File', file);
+    let uploadedFileUrl = null;
+    let uploadedFileName = null;
 
     try {
       setIsSubmitting(true);
-      await axios.post(`/api/taskcard/respond/${taskToRespond.id}`, formData, {
-        headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data'}
-      });
-      toast({ status: 'success', description: 'Ответ отправлен' });
+
+      if (file) {
+        const fileForm = new FormData();
+        fileForm.append('file', file);
+
+        const uploadRes = await axios.post( '/api/files/upload-files',
+          fileForm, { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+
+        uploadedFileUrl = uploadRes.data.fileUrl;
+        uploadedFileName = new URL(uploadedFileUrl).pathname.split('/').pop();
+      }
+
+      const formData = new FormData();
+      formData.append('TaskId', taskToRespond.id);
+      formData.append('ResponseText', responseText);
+      if (uploadedFileUrl) {
+        formData.append('FileUrl', uploadedFileUrl);
+      }
+
+      await axios.post( `/api/taskcard/respond`,
+        formData, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data', },}
+      );
+
+      toast({ status: 'success', description: 'Ответ отправлен.' });
       onResponseClose();
       setResponseText('');
       setFile(null);
-      fetchTasks(); 
-    } catch (error) {
-      console.error("Ошибка при отправке ответа:", error);
-      toast({ status: 'success', description: 'Не удалось ответить на задание' });
+      fetchTasks();
+
+    } catch (err) {
+      console.error('Ошибка при отправке ответа:', err);
+
+      if (uploadedFileName) {
+        try {
+          await axios.delete(`/api/files/delete-files/${uploadedFileName}`);
+        } catch (delErr) {
+          console.warn('Не удалось удалить файл после ошибки:', delErr);
+        }
+      }
+
+      toast({
+        status: 'error',
+        title: 'Не удалось отправить ответ',
+        description: err.response?.data || err.message,
+      });
+
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!isResponseModalOpen) {
+      setResponseText('');
+      setResponseFile(null);
+      setIsSubmitting(false);
+    }
+  }, [isResponseModalOpen]);
 
   useEffect(() => {
     fetchTasks();
@@ -488,13 +538,25 @@ const [taskToRespond, setTaskToRespond] = useState(null);
                 />
               </FormControl>
 
-              <FormControl mb={4}>
+              <FormControl>
                 <FormLabel>Прикрепить файл</FormLabel>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  accept="*"
-                />
+                <Flex align="center">
+                  <input
+                    type="file"
+                    display="none"
+                    id="file-upload21"
+                    onChange={(e) => setFile(e.target.files[0])}
+                  />
+                  <IconButton
+                    as="label"
+                    htmlFor="file-upload21"
+                    icon={<AttachmentIcon />}
+                    variant="outline"
+                    borderColor="gray"
+                    aria-label="Загрузить файл"
+                  />
+                  {file && <span style={{ marginLeft: '10px' }}>{file.name}</span>}
+                </Flex>
               </FormControl>
 
               <Button
