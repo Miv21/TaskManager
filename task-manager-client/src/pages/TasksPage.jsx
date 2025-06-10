@@ -3,7 +3,7 @@ import {
   Box, Heading, Button, SimpleGrid, Text, useDisclosure, Flex, Tabs, TabList, TabPanels,
   Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalBody, ModalCloseButton, FormControl, FormLabel, Textarea,
-  Divider, IconButton, useToast
+  Divider, IconButton, useToast, Input, 
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
@@ -47,16 +47,11 @@ const TasksPage = () => {
     }
   };
 
-  const [isResponseModalOpen, { onOpen: onOpenResponseModal, onClose: onCloseResponseModal }] = useDisclosure();
+  
   const [responseText, setResponseText] = useState('');
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [responseFile, setResponseFile] = useState(null);
 
-  const handleOpenResponseModal = () => {
-    onClose(); 
-    onOpenResponseModal(); 
-  };
 
   const handleSubmitResponse = async () => {
     if (!responseText.trim()) {
@@ -120,14 +115,6 @@ const TasksPage = () => {
       setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (!isResponseModalOpen) {
-      setResponseText('');
-      setResponseFile(null);
-      setIsSubmitting(false);
-    }
-  }, [isResponseModalOpen]);
 
   useEffect(() => {
     fetchTasks();
@@ -218,10 +205,18 @@ const TasksPage = () => {
   const {
     isOpen: isResponseOpen,
     onOpen: onResponseOpen,
-    onClose: onResponseClose,
+    onClose: _onResponseClose,
   } = useDisclosure();
 
+  const onResponseClose = () => {
+    setTaskToRespond(null);
+    setResponseText('');
+    setFile(null);
+    _onResponseClose();
+  };
+
   const handleRespondClick = (task) => {
+    setSelectedTask(null);
     setTaskToRespond(task);
     onResponseOpen();
   };
@@ -231,7 +226,7 @@ const [taskToRespond, setTaskToRespond] = useState(null);
   
   return (
     <Box w="100%" minH="90vh" p={2}>
-      <Flex justify="space-between" align="center"  >
+      <Flex justify="space-between" align="center">
         <Heading></Heading>
         {canCreateTask && (
           <Button
@@ -239,7 +234,7 @@ const [taskToRespond, setTaskToRespond] = useState(null);
             onClick={onCreateOpen}
             borderRadius="25"
             height="45px"
-            boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
+            boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
           >
             Создать задание
           </Button>
@@ -248,89 +243,82 @@ const [taskToRespond, setTaskToRespond] = useState(null);
 
       <Tabs variant="enclosed">
         <TabList borderColor="gray.400">
+          {/* Всегда: Мои задания */}
           <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
             Мои задания ({myTasks.length})
           </Tab>
+
+          {/* Только для Employer/TopeEmployer */}
           {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
               Созданные задания ({createdTasks.length})
             </Tab>
           )}
+
+          {/* Всегда: Мои ответы */}
           <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
             Мои ответы ({myResponse.length})
           </Tab>
+
+          {/* Только для Employer/TopeEmployer */}
           {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
               Ответы на мои задания ({responseMyTask.length})
             </Tab>
           )}
         </TabList>
+
         <TabPanels>
+          {/* === Мои задания === */}
           <TabPanel>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
               {myTasks.length === 0 ? (
                 <Text>Нет назначенных вам заданий.</Text>
               ) : (
                 myTasks.map((task) => (
+                  /* Твоя карточка */
                   <Box
                     key={task.id}
-                    w="200px"
-                    h="280px"
-                    borderRadius="25px"
-                    boxShadow="4px 7px 12px rgba(0, 0, 0, 0.2)"
-                    cursor="pointer"
-                    onClick={() => openTaskDetails(task)}
-                    transition="all 0.2s"
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    flexDirection="column"
+                    w="200px" h="280px" borderRadius="25px"
+                    boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
+                    cursor="pointer" onClick={() => openTaskDetails(task)}
+                    transition="all .2s" display="flex" flexDirection="column"
+                    justifyContent="center" alignItems="center"
                     _hover={{
                       transform: 'translateY(-4px)',
-                      boxShadow: '4px 6px 16px rgba(0, 0, 0, 0.15)',
+                      boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
                     }}
                     bg="polar.100"
                   >
-                    <Box 
-                      h="80%" 
-                      w="90%" 
-                      display="flex" 
-                      flexDirection="column"  
-                      justifyContent="space-between" 
-                      mt="2px"
-                      borderRadius="20px 20px 15px 15px"
-                      bg="polar.100"
+                    {/* Содержимое карточки */}
+                    <Box
+                      h="80%" w="90%" display="flex" flexDirection="column"
+                      justifyContent="space-between" mt="2px"
+                      borderRadius="20px 20px 15px 15px" bg="polar.100"
                     >
                       <Box borderRadius="20px">
                         <Heading
-                          as="h3"
-                          fontSize="md"
-                          textAlign="center"
-                          mb={2}
-                          noOfLines={2}
-                          px={25}
+                          as="h3" fontSize="md" textAlign="center" mb={2}
+                          noOfLines={2} px={25}
                         >
                           {task.title}
                         </Heading>
-                        <Divider/>
+                        <Divider />
                         <Text
-                          fontSize="sm"
-                          color="gray.700"
-                          marginLeft={10}
+                          fontSize="sm" color="gray.700" marginLeft="7px"
                           sx={{
                             display: '-webkit-box',
-                            WebkitLineClamp: '7',
+                            WebkitLineClamp: 7,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             maxHeight: '145px',
-                            marginLeft: '7px',
                           }}
                         >
                           {task.description}
                         </Text>
                       </Box>
-                      <Divider/>
+                      <Divider />
                     </Box>
                     <Text fontSize="xss" color="gray.600" mt="10px">
                       Дедлайн: {new Date(task.deadline).toLocaleDateString()}
@@ -340,119 +328,102 @@ const [taskToRespond, setTaskToRespond] = useState(null);
               )}
             </SimpleGrid>
           </TabPanel>
-
-          <TabPanel>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {createdTasks.length === 0 ? (
-                <Text>Вы еще не создавали заданий.</Text>
-              ) : (
-                createdTasks.map((task) => (
-                  <Box
-                    key={task.id}
-                    w="200px"
-                    h="280px"
-                    borderRadius="25px"
-                    boxShadow="4px 7px 12px rgba(0, 0, 0, 0.2)"
-                    transition="all 0.2s"
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    flexDirection="column"
-                    bg="polar.100"
-                  >
-                    <Box h="80%"
-                      w="90%" 
-                      display="flex" 
-                      flexDirection="column"  
-                      justifyContent="space-between" 
-                      mt="10px"
-                      borderRadius="20px 20px 15px 15px"
+          {canCreateTask && (
+            <TabPanel>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+                {createdTasks.length === 0 ? (
+                  <Text>Вы еще не создавали заданий.</Text>
+                ) : (
+                  createdTasks.map((task) => (
+                    <Box
+                      key={task.id}
+                      w="200px" h="280px" borderRadius="25px"
+                      boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
+                      transition="all .2s" display="flex" flexDirection="column"
+                      justifyContent="center" alignItems="center"
                       bg="polar.100"
                     >
-                      <Box >
-                        <Heading
-                          as="h3"
-                          fontSize="md"
-                          textAlign="center"
-                          mb={2}
-                          noOfLines={2}
-                          px={25}
-                        >
-                          {task.title}
-                        </Heading>
-                        <Divider/>
-                        <Text
-                          fontSize="sm"
-                          color="gray.700"
-                          sx={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: '7',
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxHeight: '145px',
-                            marginLeft: '12px',
-                          }}
-                        >
-                          {task.description}
-                        </Text>
+                      <Box
+                        h="80%" w="90%" display="flex" flexDirection="column"
+                        justifyContent="space-between" mt="10px"
+                        borderRadius="20px 20px 15px 15px" bg="polar.100"
+                      >
+                        <Box>
+                          <Heading
+                            as="h3" fontSize="md" textAlign="center" mb={2}
+                            noOfLines={2} px={25}
+                          >
+                            {task.title}
+                          </Heading>
+                          <Divider />
+                          <Text
+                            fontSize="sm" color="gray.700"
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 7,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '145px',
+                              marginLeft: '12px',
+                            }}
+                          >
+                            {task.description}
+                          </Text>
+                        </Box>
+                        <Divider />
                       </Box>
-                      <Divider/>
+                      <Text fontSize="xss" color="gray.600" mt="7px">
+                        Дедлайн: {new Date(task.deadline).toLocaleDateString()}
+                      </Text>
+                      <Box mt={2} display="flex" gap={4} mb={3}>
+                        <IconButton
+                          aria-label="Редактировать"
+                          icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
+                          size="sm" variant="ghost"
+                          onClick={() => handleEditClick(task)}
+                        />
+                        <IconButton
+                          aria-label="Удалить"
+                          icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
+                          size="sm" variant="ghost"
+                          onClick={() => handleDelete(task.id)}
+                        />
+                      </Box>
                     </Box>
-                    <Text fontSize="xss" color="gray.600" mt="7px">
-                      Дедлайн: {new Date(task.deadline).toLocaleDateString()}
-                    </Text>
-                    <Box mt={2} display="flex" gap={20} mb={3} >
-                      <IconButton
-                        bg= "polar.100"
-                        aria-label="Редактировать"
-                        icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
-                        size="sm"
-                        variant="ghost"
-                        boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
-                        _hover={{ bg: "polar.200", color: "polar.100" }}
-                        _active={{ bg: "polar.300", color: "polar.100", boxShadow: "none" }}
-                        onClick={() => handleEditClick(task)}
-                      />
-                      <IconButton
-                        bg= "polar.100"
-                        aria-label="Удалить"
-                        icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
-                        size="sm"
-                        variant="ghost"
-                        boxShadow="0px 4px 7px 0px rgba(0, 0, 0, 0.2)"
-                        _hover={{ bg: "polar.200", color: "polar.100" }}
-                        _active={{ bg: "polar.300", color: "polar.100", boxShadow: "none" }}
-                        onClick={() => handleDelete(task.id)} 
-                      />
-                    </Box>
-                  </Box>
-                ))
-              )}
-            </SimpleGrid>
-          </TabPanel>
+                  ))
+                )}
+              </SimpleGrid>
+            </TabPanel>
+          )}
+
           <TabPanel>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
               {myResponse.length === 0 ? (
                 <Text>Вы еще не ответили на ваши задания.</Text>
               ) : (
                 myResponse.map((task) => (
-                  <Box></Box>
+                  <Box key={task.id}>
+                  </Box>
                 ))
               )}
             </SimpleGrid>
           </TabPanel>
-          <TabPanel>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {responseMyTask.length === 0 ? (
-                <Text>Вы еще не получили ответы на ваши.</Text>
-              ) : (
-                responseMyTask.map((task) => (
-                  <Box></Box>
-                ))
-              )}
-            </SimpleGrid>
-          </TabPanel>
+
+          {canCreateTask && (
+            <TabPanel>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+                {responseMyTask.length === 0 ? (
+                  <Text>Вы еще не получили ответы на ваши.</Text>
+                ) : (
+                  responseMyTask.map((task) => (
+                    <Box key={task.id}>
+                    </Box>
+                  ))
+                )}
+              </SimpleGrid>
+            </TabPanel>
+          )}
         </TabPanels>
       </Tabs>
 
@@ -541,7 +512,7 @@ const [taskToRespond, setTaskToRespond] = useState(null);
               <FormControl>
                 <FormLabel>Прикрепить файл</FormLabel>
                 <Flex align="center">
-                  <input
+                  <Input
                     type="file"
                     display="none"
                     id="file-upload21"
