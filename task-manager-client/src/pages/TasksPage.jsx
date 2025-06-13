@@ -1,233 +1,158 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Box, Heading, Button, SimpleGrid, Text, useDisclosure, Flex, Tabs, TabList, TabPanels,
-  Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalBody, ModalCloseButton, FormControl, FormLabel, Textarea,
-  Divider, IconButton, useToast, Input, 
+  Box, Heading, Button, SimpleGrid, Text, useDisclosure, Flex,
+  Tabs, TabList, TabPanels, Tab, TabPanel,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
+  FormControl, FormLabel, Textarea, Divider, IconButton, useToast, Input,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
 import TaskCreateModal from '../components/TaskCreateModal';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
 import TaskEditModal from '../components/TaskEditModal';
-import { AttachmentIcon } from '@chakra-ui/icons';
-
+import { EditIcon, DeleteIcon, AttachmentIcon } from '@chakra-ui/icons';
 
 const TasksPage = () => {
-  const [tasks, setTasks] = useState([]);
+  const [cards, setCards] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
-  const {
-    isOpen: isCreateOpen,
-    onOpen: onCreateOpen,
-    onClose: rawOnCreateClose,
-  } = useDisclosure();
-  const {
-    isOpen: isEditOpen,
-    onOpen: onEditOpen,
-    onClose: onEditClose,
-  } = useDisclosure();
-  
-  const [taskToEdit, setTaskToEdit] = useState(null);
-
-  const createButtonRef = useRef(null); 
-
-  const { user } = useAuth();
-  const token = localStorage.getItem('token');
-
-  const fetchTasks = async () => {
-    try {
-      const res = await axios.get('/api/taskcard/card', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTasks(res.data);
-    } catch (error) {
-      console.error('Ошибка при получении заданий', error);
-    }
-  };
-
-  
+  const [taskToRespond, setTaskToRespond] = useState(null);
   const [responseText, setResponseText] = useState('');
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { user } = useAuth();
+  const token = localStorage.getItem('token');
+  const toast = useToast();
+  const createButtonRef = useRef(null);
+
+  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: rawOnCreateClose } = useDisclosure();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isResponseOpen, onOpen: onResponseOpen, onClose: _onResponseClose } = useDisclosure();
+
+  // Fetch all four types of cards
+  const fetchCards = async () => {
+    try {
+      const res = await axios.get('/api/taskcard/card', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const normalized = res.data.map(c => ({
+        Id:          c.id,
+        Type:        c.type,
+        Title:       c.title,
+        Description: c.description,
+        Deadline:    c.deadline,
+        FileUrl:     c.fileUrl
+      }));
+      setCards(normalized);
+    } catch (err) {
+      console.error('Ошибка при получении карточек', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCards();
+  }, []);
+
+  // split by Type
+  const myTasks         = cards.filter(c => c.Type === 'MyTasks');
+  const createdTasks    = cards.filter(c => c.Type === 'CreatedTasks');
+  const myResponses     = cards.filter(c => c.Type === 'MyResponses');
+  const responsesToMe   = cards.filter(c => c.Type === 'ResponsesToMyTasks');
+
+  const canCreateTask = user?.role === 'Employer' || user?.role === 'TopeEmployer';
+
+  const onCreateClose = () => {
+    rawOnCreateClose();
+    createButtonRef.current?.blur();
+  };
+
+  const openTaskDetails = task => {
+    setSelectedTask(task);
+    onOpen();
+  };
+
+  const handleEditClick = task => {
+    setTaskToRespond(null);
+    setSelectedTask(null);
+    setResponseText('');
+    onEditOpen();
+    setSelectedTask(task);
+  };
+
+  const handleDelete = async id => {
+    try {
+      await axios.delete(`/api/taskcard/delete/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCards();
+    } catch (err) {
+      console.error('Ошибка при удалении задания', err);
+      toast({ status: 'error', description: 'Не удалось удалить' });
+    }
+  };
+
+  const handleRespondClick = task => {
+    setSelectedTask(null);
+    setTaskToRespond(task);
+    setResponseText('');
+    setFile(null);
+    onResponseOpen();
+  };
+
+  const onResponseClose = () => {
+    _onResponseClose();
+    setTaskToRespond(null);
+    setResponseText('');
+    setFile(null);
+  };
+
+  const handleDownload = async id => {
+    try {
+      const res = await axios.get(`/api/taskcard/file-link/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const link = document.createElement('a');
+      link.href = res.data.fileUrl;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      toast({ status: 'error', description: 'Не удалось скачать файл' });
+    }
+  };
 
   const handleSubmitResponse = async () => {
     if (!responseText.trim()) {
       toast({ status: 'error', description: 'Ответ не может быть пустым.' });
       return;
     }
-
-    let uploadedFileUrl = null;
-    let uploadedFileName = null;
-
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-
-      if (file) {
-        const fileForm = new FormData();
-        fileForm.append('file', file);
-
-        const uploadRes = await axios.post( '/api/files/upload-files',
-          fileForm, { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        uploadedFileUrl = uploadRes.data.fileUrl;
-        uploadedFileName = new URL(uploadedFileUrl).pathname.split('/').pop();
-      }
-
       const formData = new FormData();
       formData.append('TaskId', taskToRespond.id);
       formData.append('ResponseText', responseText);
-      if (uploadedFileUrl) {
-        formData.append('FileUrl', uploadedFileUrl);
-      }
+      if (file) formData.append('File', file);
 
-      await axios.post( `/api/taskcard/respond`,
-        formData, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data', },}
-      );
+      await axios.post(`/api/taskcard/respond/${taskToRespond.id}`, formData, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+      });
 
       toast({ status: 'success', description: 'Ответ отправлен.' });
       onResponseClose();
-      setResponseText('');
-      setFile(null);
-      fetchTasks();
-
+      fetchCards();
     } catch (err) {
-      console.error('Ошибка при отправке ответа:', err);
-
-      if (uploadedFileName) {
-        try {
-          await axios.delete(`/api/files/delete-files/${uploadedFileName}`);
-        } catch (delErr) {
-          console.warn('Не удалось удалить файл после ошибки:', delErr);
-        }
-      }
-
-      toast({
-        status: 'error',
-        title: 'Не удалось отправить ответ',
-        description: err.response?.data || err.message,
-      });
-
+      console.error(err);
+      toast({ status: 'error', description: 'Не удалось отправить ответ.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && !isCreateOpen && !isOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isCreateOpen, isOpen]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Enter' && isOpen) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  const openTaskDetails = (task) => {
-    setSelectedTask(task);
-    onOpen();
-  };
-
-  const handleEditClick = (task) => {
-    setTaskToEdit(task);
-    onEditOpen();
-  };
-
-  const canCreateTask = user?.role === 'Employer' || user?.role === 'TopeEmployer';
-
-  const myId = parseInt(user?.id);
-  const myTasks = tasks.filter(task => task.targetUserId === myId);
-  const createdTasks = tasks.filter(task => task.employerId === myId);
-  const myResponse = [];
-  const responseMyTask = [];
-
-  const onCreateClose = () => {
-    rawOnCreateClose();
-    if (createButtonRef.current) {
-      createButtonRef.current.blur();
-    }
-  };
-
-  const handleDownload = async (id) => {
-    try {
-      const res = await axios.get(`/api/taskcard/file-link/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const fileUrl = res.data.fileUrl;
-
-      const link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = '';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Ошибка при скачивании файла:", error);
-      toast({ status: 'success', description: 'Не удалось скачать файл' });
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await axios.delete(`/api/taskcard/delete/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchTasks();
-    } catch (err) {
-      console.error('Ошибка при удалении задания:', err);
-      toast({ status: 'success', description: 'шибка при удалении задания' });
-    }
-  };
-
-  const {
-    isOpen: isResponseOpen,
-    onOpen: onResponseOpen,
-    onClose: _onResponseClose,
-  } = useDisclosure();
-
-  const onResponseClose = () => {
-    setTaskToRespond(null);
-    setResponseText('');
-    setFile(null);
-    _onResponseClose();
-  };
-
-  const handleRespondClick = (task) => {
-    setSelectedTask(null);
-    setTaskToRespond(task);
-    onResponseOpen();
-  };
-
-
-const [taskToRespond, setTaskToRespond] = useState(null);
-  
   return (
     <Box w="100%" minH="90vh" p={2}>
       <Flex justify="space-between" align="center">
-        <Heading></Heading>
+        <Heading>Задания</Heading>
         {canCreateTask && (
           <Button
             ref={createButtonRef}
@@ -243,69 +168,54 @@ const [taskToRespond, setTaskToRespond] = useState(null);
 
       <Tabs variant="enclosed">
         <TabList borderColor="gray.400">
-          {/* Всегда: Мои задания */}
           <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
             Мои задания ({myTasks.length})
           </Tab>
-
-          {/* Только для Employer/TopeEmployer */}
           {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
               Созданные задания ({createdTasks.length})
             </Tab>
           )}
-
-          {/* Всегда: Мои ответы */}
           <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
-            Мои ответы ({myResponse.length})
+            Мои ответы ({myResponses.length})
           </Tab>
-
-          {/* Только для Employer/TopeEmployer */}
           {canCreateTask && (
             <Tab borderColor="gray.400" _selected={{ borderColor: 'gray.500' }}>
-              Ответы на мои задания ({responseMyTask.length})
+              Ответы на мои задания ({responsesToMe.length})
             </Tab>
           )}
         </TabList>
 
         <TabPanels>
-          {/* === Мои задания === */}
+          {/* Мои задания */}
           <TabPanel>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {myTasks.length === 0 ? (
-                <Text>Нет назначенных вам заданий.</Text>
-              ) : (
-                myTasks.map((task) => (
-                  /* Твоя карточка */
-                  <Box
-                    key={task.id}
-                    w="200px" h="280px" borderRadius="25px"
+            <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
+              {myTasks.length === 0
+                ? <Text>Нет назначенных вам заданий.</Text>
+                : myTasks.map(task => (
+                  <Box key={task.Id}
+                    w="200px" h="290px" borderRadius="25px" bg="polar.100"
                     boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
-                    cursor="pointer" onClick={() => openTaskDetails(task)}
-                    transition="all .2s" display="flex" flexDirection="column"
-                    justifyContent="center" alignItems="center"
+                    cursor="pointer"
+                    onClick={() => openTaskDetails(task)}
+                    transition="all .2s"
                     _hover={{
                       transform: 'translateY(-4px)',
                       boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
                     }}
-                    bg="polar.100"
+                    display="flex" flexDirection="column" justifyContent="center" alignItems="center"
                   >
-                    {/* Содержимое карточки */}
                     <Box
-                      h="80%" w="90%" display="flex" flexDirection="column"
-                      justifyContent="space-between" mt="2px"
-                      borderRadius="20px 20px 15px 15px" bg="polar.100"
+                      h="80%" w="90%"
+                      display="flex" flexDirection="column" justifyContent="space-between"
+                      mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
                     >
                       <Box borderRadius="20px">
-                        <Heading
-                          as="h3" fontSize="md" textAlign="center" mb={2}
-                          noOfLines={2} px={25}
-                        >
-                          {task.title}
+                        <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                          {task.Title}
                         </Heading>
                         <Divider />
-                        <Text
-                          fontSize="sm" color="gray.700" marginLeft="7px"
+                        <Text fontSize="sm" color="gray.700" marginLeft="7px"
                           sx={{
                             display: '-webkit-box',
                             WebkitLineClamp: 7,
@@ -315,49 +225,48 @@ const [taskToRespond, setTaskToRespond] = useState(null);
                             maxHeight: '145px',
                           }}
                         >
-                          {task.description}
+                          {task.Description}
                         </Text>
                       </Box>
                       <Divider />
                     </Box>
                     <Text fontSize="xss" color="gray.600" mt="10px">
-                      Дедлайн: {new Date(task.deadline).toLocaleDateString()}
+                      Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                     </Text>
                   </Box>
                 ))
-              )}
+              }
             </SimpleGrid>
           </TabPanel>
+
+          {/* Созданные задания */}
           {canCreateTask && (
             <TabPanel>
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-                {createdTasks.length === 0 ? (
-                  <Text>Вы еще не создавали заданий.</Text>
-                ) : (
-                  createdTasks.map((task) => (
-                    <Box
-                      key={task.id}
-                      w="200px" h="280px" borderRadius="25px"
+              <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
+                {createdTasks.length === 0
+                  ? <Text>Вы еще не создавали заданий.</Text>
+                  : createdTasks.map(task => (
+                    <Box key={task.Id}
+                      w="200px" h="280px" borderRadius="25px" bg="polar.100"
                       boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
-                      transition="all .2s" display="flex" flexDirection="column"
-                      justifyContent="center" alignItems="center"
-                      bg="polar.100"
+                      transition="all .2s"
+                      display="flex" flexDirection="column" justifyContent="center" alignItems="center"
+                      _hover={{
+                        transform: 'translateY(-4px)',
+                        boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
+                      }}
                     >
                       <Box
-                        h="80%" w="90%" display="flex" flexDirection="column"
-                        justifyContent="space-between" mt="10px"
-                        borderRadius="20px 20px 15px 15px" bg="polar.100"
+                        h="80%" w="90%"
+                        display="flex" flexDirection="column" justifyContent="space-between"
+                        mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
                       >
-                        <Box>
-                          <Heading
-                            as="h3" fontSize="md" textAlign="center" mb={2}
-                            noOfLines={2} px={25}
-                          >
-                            {task.title}
+                        <Box borderRadius="20px">
+                            <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                            {task.Title}
                           </Heading>
                           <Divider />
-                          <Text
-                            fontSize="sm" color="gray.700"
+                          <Text fontSize="sm" color="gray.700"
                             sx={{
                               display: '-webkit-box',
                               WebkitLineClamp: 7,
@@ -368,121 +277,188 @@ const [taskToRespond, setTaskToRespond] = useState(null);
                               marginLeft: '12px',
                             }}
                           >
-                            {task.description}
+                            {task.Description}
                           </Text>
                         </Box>
                         <Divider />
                       </Box>
                       <Text fontSize="xss" color="gray.600" mt="7px">
-                        Дедлайн: {new Date(task.deadline).toLocaleDateString()}
+                        Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                       </Text>
-                      <Box mt={2} display="flex" gap={4} mb={3}>
+                      <Box mt={2} display="flex"  gap={4} mb={3}>
                         <IconButton
                           aria-label="Редактировать"
                           icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
-                          size="sm" variant="ghost"
+                          size="sm"
+                          variant="ghost"
                           onClick={() => handleEditClick(task)}
                         />
                         <IconButton
                           aria-label="Удалить"
                           icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
-                          size="sm" variant="ghost"
-                          onClick={() => handleDelete(task.id)}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(task.Id)}
                         />
                       </Box>
                     </Box>
                   ))
-                )}
+                }
               </SimpleGrid>
             </TabPanel>
           )}
 
+          {/* Мои ответы */}
           <TabPanel>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {myResponse.length === 0 ? (
-                <Text>Вы еще не ответили на ваши задания.</Text>
-              ) : (
-                myResponse.map((task) => (
-                  <Box key={task.id}>
+            <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
+              {myResponses.length === 0
+                ? <Text>Вы еще не ответили на задания.</Text>
+                : myResponses.map(response => (
+                  <Box key={response.Id}
+                    w="200px" h="280px" borderRadius="25px" bg="polar.100"
+                    boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
+                    transition="all .2s"
+                    display="flex" flexDirection="column" justifyContent="center" alignItems="center"
+                    _hover={{
+                      transform: 'translateY(-4px)',
+                      boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
+                    }}
+                  >
+
+                    <Box
+                      h="80%" w="90%"
+                      display="flex" flexDirection="column" justifyContent="space-between"
+                      mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
+                    > 
+                      <Box borderRadius="20px">
+                        <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                          {response.Title}
+                        </Heading>
+                        <Divider />
+                        <Text fontSize="sm" color="gray.700"
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 7,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxHeight: '145px',
+                            marginLeft: '12px',
+                          }}
+                        >
+                          {response.Description}
+                        </Text>
+                      </Box>
+                      <Divider />
+                    </Box>
+                    <Text fontSize="xss" color="gray.600" mt="7px">
+                      Дедлайн: {new Date(response.Deadline).toLocaleDateString()}
+                    </Text>
+                    <Box mt={2} display="flex"  gap={4} mb={3}>
+                      <IconButton
+                        aria-label="Редактировать"
+                        icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
+                        size="sm"
+                        variant="ghost"
+                        // onClick={() => handleEditClick(task)}
+                      />
+                    </Box>
                   </Box>
                 ))
-              )}
+              }
             </SimpleGrid>
           </TabPanel>
 
+          {/* Ответы на мои задания */}
           {canCreateTask && (
             <TabPanel>
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-                {responseMyTask.length === 0 ? (
-                  <Text>Вы еще не получили ответы на ваши.</Text>
-                ) : (
-                  responseMyTask.map((task) => (
-                    <Box key={task.id}>
+              <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
+                {responsesToMe.length === 0
+                  ? <Text>На ваши задания еще нет ответов.</Text>
+                  : responsesToMe.map(response => (
+                    <Box key={response.Id}
+                      w="200px" h="280px" borderRadius="25px" bg="polar.100"
+                      boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
+                      cursor="pointer"
+                      onClick={() => openTaskDetails(response)}
+                      transition="all .2s"
+                      display="flex" flexDirection="column" justifyContent="center" alignItems="center"
+                      _hover={{
+                        transform: 'translateY(-4px)',
+                        boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      <Box
+                        h="80%" w="90%"
+                        display="flex" flexDirection="column" justifyContent="space-between"
+                        mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
+                      >
+                        <Box borderRadius="20px">
+                          <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                            {response.Title}
+                          </Heading>
+                          <Divider />
+                          <Text fontSize="sm" color="gray.700" marginLeft="7px"
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 7,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '145px',
+                            }}
+                          >
+                            {response.Description}
+                          </Text>
+                        </Box>
+                        <Divider />
+                      </Box>
+                      <Text fontSize="xss" color="gray.600" mt="10px">
+                        Дедлайн: {new Date(response.Deadline).toLocaleDateString()}
+                      </Text>
                     </Box>
                   ))
-                )}
+                }
               </SimpleGrid>
             </TabPanel>
           )}
         </TabPanels>
       </Tabs>
 
+      {/* Просмотр задания */}
       {selectedTask && (
         <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
           <ModalOverlay />
           <ModalContent
-            pt={7}
-            width="450px"
-            height="600px"
-            borderRadius="25px"
-            display="flex"
-            flexDirection="column"
+            pt={7} width="450px" height="600px"
+            borderRadius="25px" display="flex" flexDirection="column"
           >
-            <ModalHeader
-              as="h3"
-              textAlign="center"
-              mb={1}
-              px={50}
-            >
-              {selectedTask.title}
+            <ModalHeader textAlign="center" mb={1} px={50}>
+              {selectedTask.Title}
             </ModalHeader>
             <ModalCloseButton />
             <ModalBody flex="1">
               <Box
-                border="2px solid"
-                borderColor="blue.100"
-                borderRadius="20px"
-                height="350px"
-                p={4}
-                overflow="auto"
+                border="2px solid" borderColor="blue.100"
+                borderRadius="20px" height="350px" p={4} overflow="auto"
               >
-                <Text>{selectedTask.description}</Text>
+                <Text>{selectedTask.Description}</Text>
               </Box>
-
-              <Flex justify="space-between" mt="16" >
-                {selectedTask.fileUrl ? (
+              <Flex justify="space-between" mt="16">
+                {selectedTask.FileUrl ? (
                   <Button
-                    as="a"
-                    onClick = {() =>handleDownload(selectedTask.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => handleDownload(selectedTask.Id)}
                     borderRadius="25"
-                    boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
+                    boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
                   >
                     Скачать файл
                   </Button>
-                ) : (
-                  <Box />
-                )}
-
+                ) : <Box />}
                 <Button
                   variant="modal"
-                  as="a"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  borderRadius="25"
-                  boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)"
                   onClick={() => handleRespondClick(selectedTask)}
+                  borderRadius="25"
+                  boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
                 >
                   Ответить
                 </Button>
@@ -492,6 +468,7 @@ const [taskToRespond, setTaskToRespond] = useState(null);
         </Modal>
       )}
 
+      {/* Отправка ответа */}
       {isResponseOpen && taskToRespond && (
         <Modal isOpen={isResponseOpen} onClose={onResponseClose} isCentered size="lg">
           <ModalOverlay />
@@ -505,34 +482,32 @@ const [taskToRespond, setTaskToRespond] = useState(null);
                   height="180px"
                   borderColor="grey"
                   value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
+                  onChange={e => setResponseText(e.target.value)}
                 />
               </FormControl>
-
-              <FormControl>
+              <FormControl mb={4}>
                 <FormLabel>Прикрепить файл</FormLabel>
                 <Flex align="center">
                   <Input
                     type="file"
                     display="none"
-                    id="file-upload21"
-                    onChange={(e) => setFile(e.target.files[0])}
+                    id="file-upload"
+                    onChange={e => setFile(e.target.files[0])}
                   />
                   <IconButton
                     as="label"
-                    htmlFor="file-upload21"
+                    htmlFor="file-upload"
                     icon={<AttachmentIcon />}
                     variant="outline"
                     borderColor="gray"
                     aria-label="Загрузить файл"
                   />
-                  {file && <span style={{ marginLeft: '10px' }}>{file.name}</span>}
+                  {file && <Text ml="2">{file.name}</Text>}
                 </Flex>
               </FormControl>
-
               <Button
                 mt={4}
-                width="100%"
+                w="100%"
                 colorScheme="blue"
                 borderRadius="20px"
                 onClick={handleSubmitResponse}
@@ -545,20 +520,23 @@ const [taskToRespond, setTaskToRespond] = useState(null);
         </Modal>
       )}
 
+      {/* Создание */}
       <TaskCreateModal
         isOpen={isCreateOpen}
         onClose={onCreateClose}
-        onTaskCreated={fetchTasks}
+        onTaskCreated={fetchCards}
       />
 
+      {/* Редактирование */}
       <TaskEditModal
         isOpen={isEditOpen}
         onClose={onEditClose}
-        task={taskToEdit}
-        onTaskUpdated={fetchTasks}
+        task={selectedTask}
+        onTaskUpdated={fetchCards}
       />
     </Box>
   );
 };
 
 export default TasksPage;
+
