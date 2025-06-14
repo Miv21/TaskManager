@@ -4,7 +4,7 @@ import {
   Tabs, TabList, TabPanels, Tab, TabPanel,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
   FormControl, FormLabel, Textarea, Divider, IconButton, useToast, Input,
-  VStack, HStack // Добавил HStack
+  VStack, HStack
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
@@ -39,15 +39,22 @@ const TasksPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const normalized = res.data.map(c => ({
-        Id:            c.id,
-        Type:          c.type,
-        Title:         c.title,
-        Description:   c.description,
-        Deadline:      c.deadline,
-        FileUrl:       c.fileUrl,
-        ResponseText:  c.responseText,
-        ResponseFileUrl: c.responseFileUrl || null,
-        targetUserId:  c.targetUserId,
+        Id: c.id,
+        Type: c.type, // 'MyTasks', 'CreatedTasks', 'MyResponses', 'ResponsesToMyTasks'
+        Title: c.title,
+        Description: c.description,
+        Deadline: c.deadline,
+
+        // Для заданий (MyTasks, CreatedTasks), fileUrl из бэкенда - это файл задания.
+        // Для ответов (MyResponses, ResponsesToMyTasks), fileUrl из бэкенда - это файл ответа.
+        FileUrl: c.fileUrl,
+
+        // Это поле будет присутствовать ТОЛЬКО для карточек типа 'MyResponses' и 'ResponsesToMyTasks'
+        // и будет содержать ссылку на файл оригинального задания.
+        OriginalFileUrl: c.originalFileUrl || null,
+
+        ResponseText: c.responseText, // Присутствует для ответов
+        targetUserId: c.targetUserId,
         TargetUserEmail: c.targetUserEmail,
       }));
       setCards(normalized);
@@ -60,16 +67,15 @@ const TasksPage = () => {
     fetchCards();
   }, []);
 
+  // Фильтрация карточек
   const myTasks = cards.filter(c =>
     c.Type === 'MyTasks' &&
     (c.targetUserId === user?.id || c.TargetUserEmail === user?.email) &&
-    !c.ResponseText && !c.ResponseFileUrl
+    !c.ResponseText // Предполагаем, что ResponseText есть только у ответов
   );
 
   const myResponses = cards.filter(c =>
-    c.Type === 'MyTasks' &&
-    (c.targetUserId === user?.id || c.TargetUserEmail === user?.email) &&
-    (c.ResponseText || c.ResponseFileUrl)
+    c.Type === 'MyResponses'
   );
 
   const createdTasks = cards.filter(c => c.Type === 'CreatedTasks');
@@ -124,52 +130,69 @@ const TasksPage = () => {
     setFile(null);
   };
 
-  // ВОССТАНОВЛЕННАЯ ЛОГИКА handleDownload ИЗ ВАШЕГО ПРЕДЫДУЩЕГО КОДА
-  const handleDownload = (task) => {
-    // Если это карточка "Мои ответы" или "Ответы мне"
-    if (task.Type === 'MyResponses' || task.Type === 'ResponsesToMyTasks') {
-        // И если есть хотя бы один файл (файл задания ИЛИ файл ответа)
-        if (task.FileUrl || task.ResponseFileUrl) {
-            setTaskForFileSelection(task);
-            setIsFileSelectionModalOpen(true); // Открываем модалку выбора
-        } else {
-            toast({ status: 'info', description: 'Нет файлов для скачивания в этом ответе.' });
-        }
-    } else { // Для других типов карточек (Мои задания, Созданные задания)
-        // Проверяем только наличие файла задания и скачиваем его напрямую
-        if (task.FileUrl) {
-            initiateFileDownload(task.Id, 'taskFile');
-        } else {
-            toast({ status: 'info', description: 'Нет файла для скачивания в этом задании.' });
-        }
+  // Функция для инициации скачивания файла через бэкенд
+  const initiateFileDownload = async (id, downloadType) => {
+    try {
+      let requestUrl = '';
+      let errorMessage = '';
+
+      if (downloadType === 'taskFile') { // Для скачивания файла из 'TaskCard' (используем ID задания)
+        requestUrl = `/api/taskcard/file-link/${id}`;
+        errorMessage = 'Не удалось получить ссылку на файл задания.';
+      } else if (downloadType === 'originalTaskFileFromResponse') { // Для файла оригинального задания ИЗ TaskResponse (используем ID ответа)
+          requestUrl = `/api/taskcard/response-file-link/${id}?fileType=originalTask`;
+          errorMessage = 'Не удалось получить ссылку на файл оригинального задания из ответа.';
+      } else if (downloadType === 'responseFile') { // Для файла ответа ИЗ TaskResponse (используем ID ответа)
+          requestUrl = `/api/taskcard/response-file-link/${id}?fileType=response`;
+          errorMessage = 'Не удалось получить ссылку на файл ответа.';
+      } else {
+          toast({ status: 'error', description: 'Неизвестный тип скачивания.' });
+          return;
+      }
+
+      const res = await axios.get(requestUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const fileUrlToDownload = res.data.fileUrl;
+
+      if (!fileUrlToDownload) {
+        toast({ status: 'error', description: 'Файл не найден или недоступен для скачивания.' });
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.href = fileUrlToDownload;
+      const fileName = fileUrlToDownload.split('/').pop();
+      link.download = fileName || 'download';
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast({ status: 'success', description: 'Файл успешно скачан.' });
+    } catch (error) {
+      console.error('Ошибка при скачивании файла:', error.response?.data || error.message);
+      toast({ status: 'error', description: 'Произошла ошибка при скачивании файла.' });
     }
   };
 
-  const initiateFileDownload = async (id, fileType) => {
-    try {
-        const res = await axios.get(`/api/taskcard/file-link/${id}?type=${fileType}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        const fileUrlToDownload = res.data.fileUrl;
-
-        // Усиленная проверка: если URL пустой или null, значит файла нет или он недоступен
-        if (!fileUrlToDownload) {
-            toast({ status: 'error', description: 'Файл не найден или недоступен для скачивания. Возможно, он был удален с сервера.' });
-            return;
-        }
-
-        const link = document.createElement('a');
-        link.href = fileUrlToDownload;
-        const fileName = fileUrlToDownload.split('/').pop();
-        link.download = fileName || '';
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        toast({ status: 'success', description: 'Файл успешно скачан.' });
-    } catch (error) {
-        console.error('Ошибка при скачивании файла:', error.response?.data || error.message);
-        toast({ status: 'error', description: 'Не удалось скачать файл. Проверьте подключение к сети или свяжитесь с администратором.' });
+  // Логика открытия модалки выбора файла или прямого скачивания
+  const handleDownload = (task) => {
+    // Если это карточка ответа (MyResponses или ResponsesToMyTasks)
+    if (task.Type === 'MyResponses' || task.Type === 'ResponsesToMyTasks') {
+      // Проверяем наличие обоих типов файлов в TaskResponse
+      if (task.OriginalFileUrl || task.FileUrl) { // FileUrl здесь - это файл ответа
+        setTaskForFileSelection(task);
+        setIsFileSelectionModalOpen(true); // Открываем модалку выбора
+      } else {
+        toast({ status: 'info', description: 'Нет файлов для скачивания в этом ответе.' });
+      }
+    } else { // Для заданий (MyTasks, CreatedTasks)
+      // Здесь FileUrl - это файл самого задания
+      if (task.FileUrl) {
+        initiateFileDownload(task.Id, 'taskFile'); // Используем ID задания
+      } else {
+        toast({ status: 'info', description: 'Нет файла для скачивания в этом задании.' });
+      }
     }
   };
 
@@ -181,7 +204,7 @@ const TasksPage = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('TaskId', taskToRespond.Id);
+      formData.append('TaskId', taskToRespond.Id); // ID оригинального задания
       formData.append('ResponseText', responseText);
       if (file) formData.append('File', file);
 
@@ -312,30 +335,30 @@ const TasksPage = () => {
                         mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
                       >
                         <Box borderRadius="20px">
-                            <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
-                                {task.Title}
-                            </Heading>
-                            <Divider />
-                            <Text fontSize="sm" color="gray.700"
-                                sx={{
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 7,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxHeight: '145px',
-                                    marginLeft: '12px',
-                                }}
-                            >
-                                {task.Description}
-                            </Text>
+                          <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                            {task.Title}
+                          </Heading>
+                          <Divider />
+                          <Text fontSize="sm" color="gray.700"
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 7,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '145px',
+                              marginLeft: '12px',
+                            }}
+                          >
+                            {task.Description}
+                          </Text>
                         </Box>
                         <Divider />
                       </Box>
                       <Text fontSize="xss" color="gray.600" mt="7px">
                         Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                       </Text>
-                      <Box mt={2} display="flex"  gap={4} mb={3}>
+                      <Box mt={2} display="flex" gap={4} mb={3}>
                         <IconButton
                           aria-label="Редактировать"
                           icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
@@ -397,9 +420,9 @@ const TasksPage = () => {
                           {task.Description}
                         </Text>
                         {task.ResponseText && (
-                            <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
-                                Ваш ответ: "{task.ResponseText}"
-                            </Text>
+                          <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
+                            Ваш ответ: "{task.ResponseText}"
+                          </Text>
                         )}
                       </Box>
                       <Divider />
@@ -408,14 +431,14 @@ const TasksPage = () => {
                       Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                     </Text>
                     <Box>
-                        <IconButton
-                          aria-label="Редактировать"
-                          icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}
-                        />
-                      </Box>
+                      <IconButton
+                        aria-label="Редактировать"
+                        icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}
+                      />
+                    </Box>
                   </Box>
                 ))
               }
@@ -446,27 +469,27 @@ const TasksPage = () => {
                         mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
                       >
                         <Box borderRadius="20px">
-                            <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
-                                {response.Title}
-                            </Heading>
-                            <Divider />
-                            <Text fontSize="sm" color="gray.700" marginLeft="7px"
-                                sx={{
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 7,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxHeight: '145px',
-                                }}
-                            >
-                                {response.Description}
+                          <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                            {response.Title}
+                          </Heading>
+                          <Divider />
+                          <Text fontSize="sm" color="gray.700" marginLeft="7px"
+                            sx={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 7,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxHeight: '145px',
+                            }}
+                          >
+                            {response.Description}
+                          </Text>
+                          {response.ResponseText && (
+                            <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
+                              Ответ: "{response.ResponseText}"
                             </Text>
-                            {response.ResponseText && (
-                                <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
-                                    Ответ: "{response.ResponseText}"
-                                </Text>
-                            )}
+                          )}
                         </Box>
                         <Divider />
                       </Box>
@@ -501,19 +524,20 @@ const TasksPage = () => {
               >
                 <Text>{selectedTask.Description}</Text>
                 {selectedTask.ResponseText && (
-                    <Box mt={4} pt={4} borderTop="1px solid" borderColor="gray.200">
-                        <Heading as="h4" size="sm" mb={2}>Ответ:</Heading>
-                        <Text>{selectedTask.ResponseText}</Text>
-                    </Box>
+                  <Box mt={4} pt={4} borderTop="1px solid" borderColor="gray.200">
+                    <Heading as="h4" size="sm" mb={2}>Ответ:</Heading>
+                    <Text>{selectedTask.ResponseText}</Text>
+                  </Box>
                 )}
               </Box>
               <Flex justify="center" mt="16">
-                {(selectedTask.FileUrl || selectedTask.ResponseFileUrl) ? (
+                {/* Условие для кнопки "Скачать файл" в модалке просмотра */}
+                {(selectedTask.FileUrl || selectedTask.OriginalFileUrl) ? (
                   <Button
                     onClick={() => handleDownload(selectedTask)}
                     borderRadius="25"
                     boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
-                    mr={selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText && !selectedTask.ResponseFileUrl ? "4" : "0"}
+                    mr={selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText ? "4" : "0"}
                   >
                     Скачать файл
                   </Button>
@@ -521,15 +545,15 @@ const TasksPage = () => {
                   <Box />
                 )}
 
-                {selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText && !selectedTask.ResponseFileUrl && (
-                    <Button
-                        variant="modal"
-                        onClick={() => handleRespondClick(selectedTask)}
-                        borderRadius="25"
-                        boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
-                    >
-                        Ответить
-                    </Button>
+                {selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText && (
+                  <Button
+                    variant="modal"
+                    onClick={() => handleRespondClick(selectedTask)}
+                    borderRadius="25"
+                    boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                  >
+                    Ответить
+                  </Button>
                 )}
                 {/* Добавляем кнопки редактирования/удаления для "Созданных заданий" здесь */}
                 {selectedTask.Type === 'CreatedTasks' && (
@@ -571,38 +595,45 @@ const TasksPage = () => {
             </ModalHeader>
             <ModalCloseButton />
             <ModalBody>
-              <HStack spacing={4} mt={4} justify="center">
-                {taskForFileSelection.FileUrl && (
+              <VStack spacing={4} mt={4} justify="center">
+                {/* Кнопка для скачивания файла оригинального задания (OriginalFileUrl из TaskResponse) */}
+                {taskForFileSelection.OriginalFileUrl && (
                   <Button
                     onClick={() => {
-                      initiateFileDownload(taskForFileSelection.Id, 'taskFile');
+                      // Для TaskResponse используем Id самой TaskResponse
+                      initiateFileDownload(taskForFileSelection.Id, 'originalTaskFileFromResponse');
                       setIsFileSelectionModalOpen(false);
                     }}
                     borderRadius="25"
                     boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                    w="80%"
                   >
-                    Скачать задание
+                    Скачать файл задания
                   </Button>
                 )}
-                {taskForFileSelection.ResponseFileUrl && (
+
+                {/* Кнопка для скачивания файла ответа (FileUrl из TaskResponse) */}
+                {taskForFileSelection.FileUrl && (
                   <Button
                     onClick={() => {
+                      // Для TaskResponse используем Id самой TaskResponse
                       initiateFileDownload(taskForFileSelection.Id, 'responseFile');
                       setIsFileSelectionModalOpen(false);
                     }}
                     borderRadius="25"
                     boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                    w="80%"
                   >
-                    Скачать ответ
+                    Скачать файл ответа
                   </Button>
                 )}
-                {/* Этот блок должен быть избыточным, но оставим на всякий случай */}
-                {(!taskForFileSelection.FileUrl && !taskForFileSelection.ResponseFileUrl) && (
-                    <Text fontSize="sm" color="gray.500">
-                        Нет файлов для скачивания.
-                    </Text>
+
+                {(!taskForFileSelection.OriginalFileUrl && !taskForFileSelection.FileUrl) && (
+                  <Text fontSize="sm" color="gray.500">
+                    Нет файлов для скачивания.
+                  </Text>
                 )}
-              </HStack>
+              </VStack>
             </ModalBody>
           </ModalContent>
         </Modal>
