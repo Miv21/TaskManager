@@ -15,27 +15,78 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
   const [deadline, setDeadline] = useState('');
   const [file, setFile] = useState(null);
   const [users, setUsers] = useState([]);
-  const [targetUserId, setTargetUserId] = useState('');
+  const [targetUserId, setTargetUserId] = useState(''); // Это должно быть строкой, чтобы соответствовать значениям option
   const [originalFileUrl, setOriginalFileUrl] = useState('');
   const token = localStorage.getItem('token');
 
+  console.log('TaskEditModal rendered. Current isOpen:', isOpen, 'Current task:', task);
+
   useEffect(() => {
+    console.log('useEffect (isOpen, task) triggered.');
+
     if (isOpen && task) {
-      setTitle(task.title);
-      setDescription(task.description);
-      setDeadline(DateTime.fromISO(task.deadline).toISO({ suppressMilliseconds: true }));
-      setTargetUserId(task.targetUserId);
-      setOriginalFileUrl(task.fileUrl || '');
+      console.log("  Inside useEffect: task object received:", task);
+
+      const newTitle = task.Title || ''; 
+      const newDescription = task.Description || ''; 
+      
+      const newDeadline = task.Deadline
+        ? DateTime.fromISO(task.Deadline).isValid 
+          ? DateTime.fromISO(task.Deadline).toFormat("yyyy-MM-dd'T'HH:mm")
+          : ''
+        : '';
+      
+      // Корректный регистр для targetUserId из API
+      const newTargetUserId = task.targetUserId ? String(task.targetUserId) : ''; 
+      const newOriginalFileUrl = task.FileUrl || ''; 
+
+      console.log("  Setting states with these values:");
+      console.log("    newTitle:", newTitle);
+      console.log("    newDescription:", newDescription);
+      console.log("    newDeadline:", newDeadline);
+      console.log("    newTargetUserId (from task):", newTargetUserId); // Запишем это значение
+      console.log("    newOriginalFileUrl:", newOriginalFileUrl);
+
+      setTitle(newTitle);
+      setDescription(newDescription);
+      setDeadline(newDeadline);
+      setTargetUserId(newTargetUserId); // Устанавливаем состояние
+      setOriginalFileUrl(newOriginalFileUrl);
+
+    } else if (!isOpen) {
+      console.log('  Modal closing or task is null, resetting all states.');
+      setTitle('');
+      setDescription('');
+      setDeadline(''); 
+      setTargetUserId('');
+      setFile(null);
+      setOriginalFileUrl('');
     }
   }, [isOpen, task]);
 
   useEffect(() => {
+      console.log('States *actually* updated in DOM after render:');
+      console.log('  title (state):', title);
+      console.log('  description (state):', description);
+      console.log('  deadline (state):', deadline);
+      console.log('  targetUserId (state):', targetUserId); // ВАЖНО: Проверьте этот лог после выполнения всех эффектов
+      console.log('  originalFileUrl (state):', originalFileUrl);
+      console.log('  file (newly selected, state):', file); 
+  }, [title, description, deadline, targetUserId, originalFileUrl, file]);
+
+
+  useEffect(() => {
     if (isOpen) {
+      console.log('Fetching available users...'); 
       axios.get('/api/taskcard/available', {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(res => setUsers(res.data))
-        .catch(() => {
+        .then(res => {
+          console.log('Available users fetched:', res.data); // ВАЖНО: Проверьте этот лог на предмет ID пользователей и их типов
+          setUsers(res.data);
+        })
+        .catch((error) => {
+          console.error("Error loading users:", error); 
           toast({
             title: 'Ошибка загрузки пользователей',
             status: 'error',
@@ -44,34 +95,76 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
           });
         });
     }
-  }, [isOpen]);
+  }, [isOpen, token, toast]);
+
+  // Добавьте этот useEffect для явного логирования значения select в DOM
+  useEffect(() => {
+      if (isOpen) {
+          const selectElement = document.querySelector('select[name="targetUserId"]');
+          if (selectElement) {
+              console.log('DOM Select Element Value:', selectElement.value);
+              console.log('State targetUserId:', targetUserId);
+              // Также проверьте, соответствует ли текущий targetUserId любому пользователю в массиве 'users'
+              const foundUser = users.find(user => String(user.id) === targetUserId);
+              console.log('User found in "users" array for targetUserId:', foundUser);
+          }
+      }
+  }, [isOpen, targetUserId, users]); // Этот эффект зависит от этих состояний
 
   useEffect(() => {
     if (!isOpen) {
       setFile(null);
     }
-}, [isOpen]);
+  }, [isOpen]);
 
   const getFileNameFromUrl = (url) => {
     try {
       return url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : null;
-    } catch {
+    } catch (e) {
+      console.error("Error parsing file URL:", e);
       return null;
     }
   };
 
-  
-
   const handleUpdate = async () => {
+    if (!task || typeof task.Id === 'undefined' || task.Id === null) { 
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось определить ID задания для обновления.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('Id', task.id);
+    formData.append('Id', task.Id); 
     formData.append('Title', title);
     formData.append('Description', description);
 
-    const localDeadline = DateTime.fromISO(deadline, { zone: 'Europe/Moscow' });
-    const utcDeadline = localDeadline.toUTC().toISO();
-    formData.append('Deadline', utcDeadline);
-    formData.append('TargetUserId', targetUserId);
+    if (deadline) {
+        const localDeadline = DateTime.fromISO(deadline); 
+        const utcDeadline = localDeadline.toUTC().toISO(); 
+        formData.append('Deadline', utcDeadline);
+    } else {
+        formData.append('Deadline', ''); 
+    }
+
+    if (task.Type === "CreatedTasks" || task.Type === "MyTasks") { 
+        const userIdAsNumber = parseInt(targetUserId, 10);
+        if (isNaN(userIdAsNumber) || userIdAsNumber <= 0) { 
+            toast({
+                title: 'Ошибка валидации',
+                description: 'Пожалуйста, укажите действительного пользователя для назначения.', 
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+        formData.append('TargetUserId', userIdAsNumber);
+    }
 
     let newFileUrl = '';
     let originalFileWasDeleted = false;
@@ -83,6 +176,8 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
         const uploadRes = await axios.post('/api/files/upload-files', fileForm);
         newFileUrl = uploadRes.data.fileUrl;
         formData.append('FileUrl', newFileUrl);
+      } else {
+        formData.append('FileUrl', originalFileUrl || '');
       }
 
       await axios.put('/api/taskcard/update', formData, {
@@ -110,16 +205,23 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
       onTaskUpdated();
 
     } catch (err) {
+      console.error('Ошибка при обновлении задания:', err);
+
       if (newFileUrl) {
         const newFileName = getFileNameFromUrl(newFileUrl);
         if (newFileName) {
-          await axios.delete(`/api/files/delete-files/${newFileName}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          try {
+            await axios.delete(`/api/files/delete-files/${newFileName}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log('Загруженный новый файл успешно удален из-за ошибки обновления задачи.');
+          } catch (deleteNewFileErr) {
+            console.error('Ошибка при удалении нового загруженного файла:', deleteNewFileErr);
+          }
         }
       }
 
-      if (file && originalFileUrl && originalFileWasDeleted) {
+      if (originalFileUrl && originalFileWasDeleted) {
         try {
           const originalFile = await fetch(originalFileUrl).then(res => res.blob());
           const filename = getFileNameFromUrl(originalFileUrl);
@@ -131,8 +233,9 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
           await axios.post('/api/files/upload-files', reuploadForm, {
             headers: { Authorization: `Bearer ${token}` }
           });
+          console.log('Оригинальный файл успешно восстановлен после ошибки обновления задачи.');
         } catch (restoreErr) {
-          console.error('Ошибка восстановления файла:', restoreErr);
+          console.error('Ошибка восстановления оригинального файла:', restoreErr);
         }
       }
 
@@ -161,6 +264,7 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             <FormLabel>Описание</FormLabel>
             <Textarea height="249px"  borderColor="grey" value={description} onChange={(e) => setDescription(e.target.value)} />
           </FormControl>
+          
           <FormControl mb={4}>
             <FormLabel>Дедлайн</FormLabel>
             <Input
@@ -170,34 +274,50 @@ const TaskEditModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
               onChange={(e) => setDeadline(e.target.value)}
             />
           </FormControl>
-          <FormControl mb={4}>
-            <FormLabel>Пользователь</FormLabel>
-            <Select borderColor="grey" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <FormLabel>Заменить файл (необязательно)</FormLabel>
+          
+          { (task && (task.Type === "CreatedTasks" || task.Type === "MyTasks")) && (
+              <FormControl mb={4}>
+                <FormLabel>Пользователь</FormLabel>
+                <Select 
+                  borderColor="grey" 
+                  value={targetUserId} // Это состояние управляет выбранной опцией
+                  onChange={(e) => setTargetUserId(e.target.value)}
+                  name="targetUserId" 
+                >
+                  <option value="">Выберите пользователя</option> 
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                  ))}
+                </Select>
+              </FormControl>
+          )}
+
+          <FormControl mb={4}> 
+            <FormLabel htmlFor="file-edit">Заменить файл (необязательно)</FormLabel>
             <Flex align="center">
               <Input
                 type="file"
                 display="none"
-                id="file-edit"
+                id="file-edit" 
                 onChange={(e) => setFile(e.target.files[0])}
               />
               <IconButton
-                as="label"
-                htmlFor="file-edit"
+                as="label" 
+                htmlFor="file-edit" 
                 icon={<AttachmentIcon />}
                 variant="outline"
                 borderColor="gray"
                 aria-label="Загрузить файл"
               />
               {file && <span style={{ marginLeft: '10px' }}>{file.name}</span>}
+              {!file && originalFileUrl && (
+                <span style={{ marginLeft: '10px' }}>
+                    Текущий файл: <a href={originalFileUrl} target="_blank" rel="noopener noreferrer">{getFileNameFromUrl(originalFileUrl)}</a>
+                </span>
+              )}
             </Flex>
           </FormControl>
+          
         </ModalBody>
         <ModalFooter justifyContent="center">
           <Button

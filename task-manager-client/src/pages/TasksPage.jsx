@@ -4,6 +4,7 @@ import {
   Tabs, TabList, TabPanels, Tab, TabPanel,
   Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton,
   FormControl, FormLabel, Textarea, Divider, IconButton, useToast, Input,
+  VStack, HStack // Добавил HStack
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../utils/useAuth';
@@ -19,6 +20,9 @@ const TasksPage = () => {
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [isFileSelectionModalOpen, setIsFileSelectionModalOpen] = useState(false);
+  const [taskForFileSelection, setTaskForFileSelection] = useState(null);
+
   const { user } = useAuth();
   const token = localStorage.getItem('token');
   const toast = useToast();
@@ -29,19 +33,22 @@ const TasksPage = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isResponseOpen, onOpen: onResponseOpen, onClose: _onResponseClose } = useDisclosure();
 
-  // Fetch all four types of cards
   const fetchCards = async () => {
     try {
       const res = await axios.get('/api/taskcard/card', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const normalized = res.data.map(c => ({
-        Id:          c.id,
-        Type:        c.type,
-        Title:       c.title,
-        Description: c.description,
-        Deadline:    c.deadline,
-        FileUrl:     c.fileUrl
+        Id:            c.id,
+        Type:          c.type,
+        Title:         c.title,
+        Description:   c.description,
+        Deadline:      c.deadline,
+        FileUrl:       c.fileUrl,
+        ResponseText:  c.responseText,
+        ResponseFileUrl: c.responseFileUrl || null,
+        targetUserId:  c.targetUserId,
+        TargetUserEmail: c.targetUserEmail,
       }));
       setCards(normalized);
     } catch (err) {
@@ -53,11 +60,21 @@ const TasksPage = () => {
     fetchCards();
   }, []);
 
-  // split by Type
-  const myTasks         = cards.filter(c => c.Type === 'MyTasks');
-  const createdTasks    = cards.filter(c => c.Type === 'CreatedTasks');
-  const myResponses     = cards.filter(c => c.Type === 'MyResponses');
-  const responsesToMe   = cards.filter(c => c.Type === 'ResponsesToMyTasks');
+  const myTasks = cards.filter(c =>
+    c.Type === 'MyTasks' &&
+    (c.targetUserId === user?.id || c.TargetUserEmail === user?.email) &&
+    !c.ResponseText && !c.ResponseFileUrl
+  );
+
+  const myResponses = cards.filter(c =>
+    c.Type === 'MyTasks' &&
+    (c.targetUserId === user?.id || c.TargetUserEmail === user?.email) &&
+    (c.ResponseText || c.ResponseFileUrl)
+  );
+
+  const createdTasks = cards.filter(c => c.Type === 'CreatedTasks');
+  const responsesToMe = cards.filter(c => c.Type === 'ResponsesToMyTasks');
+
 
   const canCreateTask = user?.role === 'Employer' || user?.role === 'TopeEmployer';
 
@@ -85,9 +102,10 @@ const TasksPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchCards();
+      toast({ status: 'success', description: 'Задание успешно удалено.' });
     } catch (err) {
       console.error('Ошибка при удалении задания', err);
-      toast({ status: 'error', description: 'Не удалось удалить' });
+      toast({ status: 'error', description: 'Не удалось удалить.' });
     }
   };
 
@@ -106,35 +124,68 @@ const TasksPage = () => {
     setFile(null);
   };
 
-  const handleDownload = async id => {
+  // ВОССТАНОВЛЕННАЯ ЛОГИКА handleDownload ИЗ ВАШЕГО ПРЕДЫДУЩЕГО КОДА
+  const handleDownload = (task) => {
+    // Если это карточка "Мои ответы" или "Ответы мне"
+    if (task.Type === 'MyResponses' || task.Type === 'ResponsesToMyTasks') {
+        // И если есть хотя бы один файл (файл задания ИЛИ файл ответа)
+        if (task.FileUrl || task.ResponseFileUrl) {
+            setTaskForFileSelection(task);
+            setIsFileSelectionModalOpen(true); // Открываем модалку выбора
+        } else {
+            toast({ status: 'info', description: 'Нет файлов для скачивания в этом ответе.' });
+        }
+    } else { // Для других типов карточек (Мои задания, Созданные задания)
+        // Проверяем только наличие файла задания и скачиваем его напрямую
+        if (task.FileUrl) {
+            initiateFileDownload(task.Id, 'taskFile');
+        } else {
+            toast({ status: 'info', description: 'Нет файла для скачивания в этом задании.' });
+        }
+    }
+  };
+
+  const initiateFileDownload = async (id, fileType) => {
     try {
-      const res = await axios.get(`/api/taskcard/file-link/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const link = document.createElement('a');
-      link.href = res.data.fileUrl;
-      link.download = '';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch {
-      toast({ status: 'error', description: 'Не удалось скачать файл' });
+        const res = await axios.get(`/api/taskcard/file-link/${id}?type=${fileType}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const fileUrlToDownload = res.data.fileUrl;
+
+        // Усиленная проверка: если URL пустой или null, значит файла нет или он недоступен
+        if (!fileUrlToDownload) {
+            toast({ status: 'error', description: 'Файл не найден или недоступен для скачивания. Возможно, он был удален с сервера.' });
+            return;
+        }
+
+        const link = document.createElement('a');
+        link.href = fileUrlToDownload;
+        const fileName = fileUrlToDownload.split('/').pop();
+        link.download = fileName || '';
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast({ status: 'success', description: 'Файл успешно скачан.' });
+    } catch (error) {
+        console.error('Ошибка при скачивании файла:', error.response?.data || error.message);
+        toast({ status: 'error', description: 'Не удалось скачать файл. Проверьте подключение к сети или свяжитесь с администратором.' });
     }
   };
 
   const handleSubmitResponse = async () => {
-    if (!responseText.trim()) {
-      toast({ status: 'error', description: 'Ответ не может быть пустым.' });
+    if (!responseText.trim() && !file) {
+      toast({ status: 'error', description: 'Ответ не может быть пустым или без файла.' });
       return;
     }
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('TaskId', taskToRespond.id);
+      formData.append('TaskId', taskToRespond.Id);
       formData.append('ResponseText', responseText);
       if (file) formData.append('File', file);
 
-      await axios.post(`/api/taskcard/respond/${taskToRespond.id}`, formData, {
+      await axios.post(`/api/taskcard/respond/${taskToRespond.Id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
 
@@ -187,14 +238,13 @@ const TasksPage = () => {
         </TabList>
 
         <TabPanels>
-          {/* Мои задания */}
           <TabPanel>
             <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
               {myTasks.length === 0
                 ? <Text>Нет назначенных вам заданий.</Text>
                 : myTasks.map(task => (
                   <Box key={task.Id}
-                    w="200px" h="290px" borderRadius="25px" bg="polar.100"
+                    w="200px" h="280px" borderRadius="25px" bg="polar.100"
                     boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
                     cursor="pointer"
                     onClick={() => openTaskDetails(task)}
@@ -215,7 +265,7 @@ const TasksPage = () => {
                           {task.Title}
                         </Heading>
                         <Divider />
-                        <Text fontSize="sm" color="gray.700" marginLeft="7px"
+                        <Text fontSize="sm" color="gray.700"
                           sx={{
                             display: '-webkit-box',
                             WebkitLineClamp: 7,
@@ -223,6 +273,7 @@ const TasksPage = () => {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             maxHeight: '145px',
+                            marginLeft: '12px',
                           }}
                         >
                           {task.Description}
@@ -230,7 +281,7 @@ const TasksPage = () => {
                       </Box>
                       <Divider />
                     </Box>
-                    <Text fontSize="xss" color="gray.600" mt="10px">
+                    <Text fontSize="xss" color="gray.600" mt="7px">
                       Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                     </Text>
                   </Box>
@@ -239,7 +290,6 @@ const TasksPage = () => {
             </SimpleGrid>
           </TabPanel>
 
-          {/* Созданные задания */}
           {canCreateTask && (
             <TabPanel>
               <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
@@ -263,22 +313,22 @@ const TasksPage = () => {
                       >
                         <Box borderRadius="20px">
                             <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
-                            {task.Title}
-                          </Heading>
-                          <Divider />
-                          <Text fontSize="sm" color="gray.700"
-                            sx={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 7,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxHeight: '145px',
-                              marginLeft: '12px',
-                            }}
-                          >
-                            {task.Description}
-                          </Text>
+                                {task.Title}
+                            </Heading>
+                            <Divider />
+                            <Text fontSize="sm" color="gray.700"
+                                sx={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 7,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxHeight: '145px',
+                                    marginLeft: '12px',
+                                }}
+                            >
+                                {task.Description}
+                            </Text>
                         </Box>
                         <Divider />
                       </Box>
@@ -291,14 +341,14 @@ const TasksPage = () => {
                           icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleEditClick(task)}
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}
                         />
                         <IconButton
                           aria-label="Удалить"
                           icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleDelete(task.Id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(task.Id); }}
                         />
                       </Box>
                     </Box>
@@ -308,13 +358,12 @@ const TasksPage = () => {
             </TabPanel>
           )}
 
-          {/* Мои ответы */}
           <TabPanel>
             <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
               {myResponses.length === 0
-                ? <Text>Вы еще не ответили на задания.</Text>
-                : myResponses.map(response => (
-                  <Box key={response.Id}
+                ? <Text>Вы еще не отвечали на задания.</Text>
+                : myResponses.map(task => (
+                  <Box key={task.Id}
                     w="200px" h="280px" borderRadius="25px" bg="polar.100"
                     boxShadow="4px 7px 12px rgba(0,0,0,0.2)"
                     transition="all .2s"
@@ -324,15 +373,14 @@ const TasksPage = () => {
                       boxShadow: '4px 6px 16px rgba(0,0,0,0.15)',
                     }}
                   >
-
                     <Box
                       h="80%" w="90%"
                       display="flex" flexDirection="column" justifyContent="space-between"
                       mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
-                    > 
+                    >
                       <Box borderRadius="20px">
                         <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
-                          {response.Title}
+                          {task.Title}
                         </Heading>
                         <Divider />
                         <Text fontSize="sm" color="gray.700"
@@ -346,30 +394,34 @@ const TasksPage = () => {
                             marginLeft: '12px',
                           }}
                         >
-                          {response.Description}
+                          {task.Description}
                         </Text>
+                        {task.ResponseText && (
+                            <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
+                                Ваш ответ: "{task.ResponseText}"
+                            </Text>
+                        )}
                       </Box>
                       <Divider />
                     </Box>
                     <Text fontSize="xss" color="gray.600" mt="7px">
-                      Дедлайн: {new Date(response.Deadline).toLocaleDateString()}
+                      Дедлайн: {new Date(task.Deadline).toLocaleDateString()}
                     </Text>
-                    <Box mt={2} display="flex"  gap={4} mb={3}>
-                      <IconButton
-                        aria-label="Редактировать"
-                        icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
-                        size="sm"
-                        variant="ghost"
-                        // onClick={() => handleEditClick(task)}
-                      />
-                    </Box>
+                    <Box>
+                        <IconButton
+                          aria-label="Редактировать"
+                          icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}
+                        />
+                      </Box>
                   </Box>
                 ))
               }
             </SimpleGrid>
           </TabPanel>
 
-          {/* Ответы на мои задания */}
           {canCreateTask && (
             <TabPanel>
               <SimpleGrid columns={{ base: 1, md: 4, lg: 6 }} spacing={1}>
@@ -394,22 +446,27 @@ const TasksPage = () => {
                         mt="2px" borderRadius="20px 20px 15px 15px" bg="polar.100"
                       >
                         <Box borderRadius="20px">
-                          <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
-                            {response.Title}
-                          </Heading>
-                          <Divider />
-                          <Text fontSize="sm" color="gray.700" marginLeft="7px"
-                            sx={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 7,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxHeight: '145px',
-                            }}
-                          >
-                            {response.Description}
-                          </Text>
+                            <Heading as="h3" fontSize="md" textAlign="center" mb={2} noOfLines={2} px={25}>
+                                {response.Title}
+                            </Heading>
+                            <Divider />
+                            <Text fontSize="sm" color="gray.700" marginLeft="7px"
+                                sx={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 7,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxHeight: '145px',
+                                }}
+                            >
+                                {response.Description}
+                            </Text>
+                            {response.ResponseText && (
+                                <Text fontSize="xs" color="gray.500" mt={2} noOfLines={2}>
+                                    Ответ: "{response.ResponseText}"
+                                </Text>
+                            )}
                         </Box>
                         <Divider />
                       </Box>
@@ -443,26 +500,109 @@ const TasksPage = () => {
                 borderRadius="20px" height="350px" p={4} overflow="auto"
               >
                 <Text>{selectedTask.Description}</Text>
+                {selectedTask.ResponseText && (
+                    <Box mt={4} pt={4} borderTop="1px solid" borderColor="gray.200">
+                        <Heading as="h4" size="sm" mb={2}>Ответ:</Heading>
+                        <Text>{selectedTask.ResponseText}</Text>
+                    </Box>
+                )}
               </Box>
-              <Flex justify="space-between" mt="16">
-                {selectedTask.FileUrl ? (
+              <Flex justify="center" mt="16">
+                {(selectedTask.FileUrl || selectedTask.ResponseFileUrl) ? (
                   <Button
-                    onClick={() => handleDownload(selectedTask.Id)}
+                    onClick={() => handleDownload(selectedTask)}
                     borderRadius="25"
                     boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                    mr={selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText && !selectedTask.ResponseFileUrl ? "4" : "0"}
                   >
                     Скачать файл
                   </Button>
-                ) : <Box />}
-                <Button
-                  variant="modal"
-                  onClick={() => handleRespondClick(selectedTask)}
-                  borderRadius="25"
-                  boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
-                >
-                  Ответить
-                </Button>
+                ) : (
+                  <Box />
+                )}
+
+                {selectedTask.Type === 'MyTasks' && !selectedTask.ResponseText && !selectedTask.ResponseFileUrl && (
+                    <Button
+                        variant="modal"
+                        onClick={() => handleRespondClick(selectedTask)}
+                        borderRadius="25"
+                        boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                    >
+                        Ответить
+                    </Button>
+                )}
+                {/* Добавляем кнопки редактирования/удаления для "Созданных заданий" здесь */}
+                {selectedTask.Type === 'CreatedTasks' && (
+                  <HStack ml={4}>
+                    <IconButton
+                      aria-label="Редактировать"
+                      icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { onClose(); handleEditClick(selectedTask); }}
+                    />
+                    <IconButton
+                      aria-label="Удалить"
+                      icon={<DeleteIcon boxSize="17px" strokeWidth="2.5" />}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { onClose(); handleDelete(selectedTask.Id); }}
+                    />
+                  </HStack>
+                )}
               </Flex>
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {/* Модалка для выбора файла скачивания */}
+      {taskForFileSelection && (
+        <Modal
+          isOpen={isFileSelectionModalOpen}
+          onClose={() => setIsFileSelectionModalOpen(false)}
+          isCentered
+          size="md"
+        >
+          <ModalOverlay />
+          <ModalContent borderRadius="25px" p={4}>
+            <ModalHeader textAlign="center" pb={0}>
+              Какой файл вы хотите скачать?
+            </ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <HStack spacing={4} mt={4} justify="center">
+                {taskForFileSelection.FileUrl && (
+                  <Button
+                    onClick={() => {
+                      initiateFileDownload(taskForFileSelection.Id, 'taskFile');
+                      setIsFileSelectionModalOpen(false);
+                    }}
+                    borderRadius="25"
+                    boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                  >
+                    Скачать задание
+                  </Button>
+                )}
+                {taskForFileSelection.ResponseFileUrl && (
+                  <Button
+                    onClick={() => {
+                      initiateFileDownload(taskForFileSelection.Id, 'responseFile');
+                      setIsFileSelectionModalOpen(false);
+                    }}
+                    borderRadius="25"
+                    boxShadow="0px 6px 5px rgba(0,0,0,0.4)"
+                  >
+                    Скачать ответ
+                  </Button>
+                )}
+                {/* Этот блок должен быть избыточным, но оставим на всякий случай */}
+                {(!taskForFileSelection.FileUrl && !taskForFileSelection.ResponseFileUrl) && (
+                    <Text fontSize="sm" color="gray.500">
+                        Нет файлов для скачивания.
+                    </Text>
+                )}
+              </HStack>
             </ModalBody>
           </ModalContent>
         </Modal>
@@ -537,6 +677,4 @@ const TasksPage = () => {
     </Box>
   );
 };
-
 export default TasksPage;
-
