@@ -156,29 +156,85 @@ namespace TaskManagerServer.Controllers
 
         [HttpGet("card")]
         [Authorize]
-        public async Task<IActionResult> GetUserTasks()
+        public async Task<IActionResult> GetUserTasksAndResponses()
         {
             var userId = GetUserId();
-            var tasks = await _context.Tasks
-                .Where(t => t.TargetUserId == userId || t.EmployerId == userId)
-                .Include(t => t.Employer)
-                .Select(t => new
+
+            var myTasks = await _context.Tasks
+                .Where(t => t.TargetUserId == userId)
+                .Select(t => new TaskCardDto
                 {
-                    t.Id,
-                    t.Title,
-                    t.Description,
-                    t.CreatedAt,
-                    t.Deadline,
-                    t.FileUrl,
-                    EmployerName = t.Employer.Name,
-                    IsCreatedByMe = t.EmployerId == userId,
-                    t.EmployerId,           
-                    t.TargetUserId          
+                    TaskId = t.Id,  
+                    ResponseId = null,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Deadline = t.Deadline,
+                    FileUrl = t.FileUrl,
+                    TargetUserId = t.TargetUserId,
+                    Type = "MyTasks"
                 })
                 .ToListAsync();
 
-            return Ok(tasks);
+            var createdTasks = await _context.Tasks
+                .Where(t => t.EmployerId == userId)
+                .Select(t => new TaskCardDto
+                {
+                    TaskId = t.Id,       
+                    ResponseId = null,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Deadline = t.Deadline,
+                    FileUrl = t.FileUrl,
+                    TargetUserId = t.TargetUserId,
+                    Type = "CreatedTasks"
+                })
+                .ToListAsync();
+
+            var myResponses = await _context.TaskResponses
+                .Where(r => r.EmployeeId == userId)
+                .Select(r => new TaskCardDto
+                {
+                    TaskId = null,   
+                    ResponseId = r.Id,
+                    Title = r.Title,
+                    Description = r.Description,
+                    ResponseText = r.ResponseText,
+                    Deadline = r.Deadline,
+                    TaskCreationTime = r.SubmittedAt,
+                    FileUrl = r.FileUrl,
+                    OriginalFileUrl = r.OriginalFileUrl,
+                    TargetUserId = null,
+                    Type = "MyResponses"
+                })
+                .ToListAsync();
+
+            var responsesToMyTasks = await _context.TaskResponses
+                .Where(r => r.EmployerId == userId)
+                .Select(r => new TaskCardDto
+                {
+                    TaskId = null,
+                    ResponseId = r.Id,
+                    Title = r.Title,
+                    Description = r.Description,
+                    ResponseText = r.ResponseText,
+                    Deadline = r.Deadline,
+                    TaskCreationTime = r.SubmittedAt,
+                    FileUrl = r.FileUrl,
+                    OriginalFileUrl = r.OriginalFileUrl,
+                    TargetUserId = null,
+                    Type = "ResponsesToMyTasks"
+                })
+                .ToListAsync();
+
+            var allCards = myTasks
+                .Concat(createdTasks)
+                .Concat(myResponses)
+                .Concat(responsesToMyTasks)
+                .ToList();
+
+            return Ok(allCards);
         }
+
 
         [HttpPut("update")]
         [Authorize]
@@ -218,6 +274,55 @@ namespace TaskManagerServer.Controllers
             return Ok(new { fileUrl = task.FileUrl });
         }
 
+        [HttpGet("response-file-link/{responseId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTaskResponseFileUrl(int responseId, [FromQuery] string fileType)
+        {
+            var taskResponse = await _context.TaskResponses.FindAsync(responseId);
+
+            if (taskResponse == null)
+                return NotFound("Ответ не найден.");
+
+            string fileUrlToReturn = null;
+            string message = "";
+
+            if (fileType == "originalTask")
+            {
+                if (!string.IsNullOrEmpty(taskResponse.OriginalFileUrl))
+                {
+                    fileUrlToReturn = taskResponse.OriginalFileUrl;
+                    message = "Файл оригинального задания";
+                }
+                else
+                {
+                    return NotFound("Файл оригинального задания не прикреплён к этому ответу.");
+                }
+            }
+            else if (fileType == "response") 
+            {
+                if (!string.IsNullOrEmpty(taskResponse.FileUrl))
+                {
+                    fileUrlToReturn = taskResponse.FileUrl;
+                    message = "Файл ответа";
+                }
+                else
+                {
+                    return NotFound("Файл ответа не прикреплён к этому ответу.");
+                }
+            }
+            else
+            {
+                return BadRequest("Неверный тип файла. Укажите 'originalTask' или 'response'.");
+            }
+
+            if (string.IsNullOrEmpty(fileUrlToReturn))
+            {
+                return NotFound($"Файл не найден для указанного типа: {fileType}.");
+            }
+
+            return Ok(new { fileUrl = fileUrlToReturn, message = message });
+        }
+
         [HttpPost("respond")]
         [Authorize]
         public async Task<IActionResult> RespondToTask([FromForm] TaskResponseCreateDto dto)
@@ -242,7 +347,7 @@ namespace TaskManagerServer.Controllers
                 FileUrl = dto.FileUrl,
                 SubmittedAt = DateTime.UtcNow,
 
-                // Копируем данные из TaskCard
+                EmployerId = task.EmployerId,
                 Title = task.Title,
                 Description = task.Description,
                 Deadline = task.Deadline,
