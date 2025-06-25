@@ -92,7 +92,7 @@ export default function UserCard() {
           _active={{ bg: "polar.300", color: "polar.100", boxShadow: "none" }}
           onClick={() => navigate('/settings')}
         />
-        <IconButton
+        {/* <IconButton
           aria-label="Сменить тему"
           icon={<SunIcon boxSize="22px" strokeWidth="2.5" />}
           variant="ghost"
@@ -101,7 +101,7 @@ export default function UserCard() {
           color="polar.300"
           _hover={{ bg: "polar.200", color: "polar.100" }}
           _active={{ bg: "polar.300", color: "polar.100", boxShadow: "none" }}
-        />
+        /> */}
       </HStack>
     </Box>
   );
