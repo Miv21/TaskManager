@@ -431,10 +431,10 @@ const TasksPage = () => {
                       <Text fontSize="xss" color="gray.600" mt="7px">
                         Дедлайн: {new Date(response.Deadline).toLocaleDateString()}
                       </Text>
-                      <Text fontSize="xss" color="gray.600" mt="7px">
+                      <Text fontSize="xss" color="gray.600" mt="7px" mb={3}>
                         Сдано: {new Date(response.TaskCreationTime).toLocaleDateString()}
                       </Text>
-                      <Box mt={2} display="flex" mb={3}>
+                      {/* <Box mt={2} display="flex" mb={3}>
                         <IconButton
                           aria-label="Редактировать ответ"
                           icon={<EditIcon boxSize="17px" strokeWidth="2.5" />}
@@ -442,7 +442,7 @@ const TasksPage = () => {
                           variant="ghost"
                           onClick={(e) => { e.stopPropagation(); handleEditClick(response); }}
                         />
-                      </Box>
+                      </Box> */}
                     </Box>
                   ))}
             </SimpleGrid>

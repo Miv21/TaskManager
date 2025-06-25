@@ -4,18 +4,19 @@ import {
   FormLabel, Input, InputGroup, InputRightElement,
   FormErrorMessage, VStack, Spinner, useToast, Divider,
   Modal, ModalOverlay, ModalContent, ModalHeader,
-  ModalCloseButton, ModalBody, Box 
+  ModalCloseButton, ModalBody, Box
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
-
-
+import { useAuth } from '../utils/useAuth'; // Импорт useAuth
 
 export default function SettingsPage() {
   const toast = useToast();
-  const [user, setUser] = useState(null);
+  // Используем user и logout из useAuth
+  const { user, logout } = useAuth(); 
+  const [localUser, setLocalUser] = useState(null); // Используем localUser для отображения данных
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState(false);
 
@@ -61,13 +62,14 @@ export default function SettingsPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     axios.get("/api/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => setUser(r.data))
+      .then(r => setLocalUser(r.data)) // Обновляем localUser
       .catch(() => {
         setLoadingError(true);
       })
       .finally(() => setLoading(false));
   }, [toast]);
 
+  // Используем localUser для отображения в случае загрузки
   if (loading) return <Spinner size="xl" />;
 
 
@@ -118,7 +120,7 @@ export default function SettingsPage() {
     }
     try {
       await axios.post(
-        `/api/users/${user.id}/validate-password`,
+        `/api/users/${localUser.id}/validate-password`, // Используем localUser.id
         { currentPassword },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
@@ -133,18 +135,18 @@ export default function SettingsPage() {
     if (!/^[A-Za-z0-9_]+$/.test(newLogin)) {
       setLoginErr("Только буквы, цифры и подчёркивание");
       return;
-    } 
-    if (newLogin === user.login) {
-    setLoginErr("Новый логин не должен совпадать с текущим");
-    return;
+    }
+    if (newLogin === localUser.login) { // Используем localUser.login
+      setLoginErr("Новый логин не должен совпадать с текущим");
+      return;
     }
     try {
       await axios.put(
-        `/api/users/${user.id}/login`,
+        `/api/users/${localUser.id}/login`, // Используем localUser.id
         { currentPassword, newLogin },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      setUser(u => ({ ...u, login: newLogin }));
+      setLocalUser(u => ({ ...u, login: newLogin })); // Обновляем localUser
       toast({ status: "success", description: "Логин обновлён" });
       closeLoginModal();
     } catch (e) {
@@ -161,13 +163,13 @@ export default function SettingsPage() {
       setPassErr("Нужна заглавная буква");
       return;
     }
-    if (newPassword === currentPassword) {
-      setPassErr("Новый пароль не должен совпадать с текущим");
+    if (newPassword === currentPassword) { // Здесь сравниваем новый пароль с введенным текущим, а не с хэшем из БД. Логика валидации должна быть на сервере.
+      setPassErr("Новый пароль не должен совпадать с текущим"); // Это сообщение будет выдано, если новый пароль совпадает с только что введенным текущим. Сервер должен проверить, совпадает ли новый пароль с тем, что хранится в БД.
       return;
     }
     try {
       await axios.put(
-        `/api/users/${user.id}/password`,
+        `/api/users/${localUser.id}/password`, // Используем localUser.id
         { currentPassword, newPassword },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
@@ -189,24 +191,30 @@ export default function SettingsPage() {
     }
   };
 
-  
-
   const saveCroppedImage = async () => {
     try {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       await axios.put(
-        `/api/users/${user.id}/avatar`,
+        `/api/users/${localUser.id}/avatar`, // Используем localUser.id
         { Base64: croppedImage },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      setUser(u => ({ ...u, avatarBase64: croppedImage.split(',')[1] }));
+      setLocalUser(u => ({ ...u, avatarBase64: croppedImage.split(',')[1] })); // Обновляем localUser
       toast({ status: "success", description: "Аватар обновлён" });
       setAvatarModal(false);
- 
-      window.location.reload();
+      
+      // Возможно, здесь стоит обновить аватар в контексте useAuth,
+      // если он там тоже хранится или просто вызвать fetch user data.
+      // Если аватара нет в контексте useAuth, можно и не обновлять.
+      window.location.reload(); // Перезагрузка страницы для обновления аватара в меню
     } catch (e) {
       toast({ status: "error", description: "Ошибка при обновлении аватара" });
     }
+  };
+
+  const handleLogout = () => {
+    logout(); // Вызываем функцию logout из AuthContext
+    window.location.href = '/login'; // Перенаправляем на страницу входа
   };
 
   return (
@@ -221,19 +229,19 @@ export default function SettingsPage() {
           <Flex align="center" gap={6}>
             <Avatar
               size="xl"
-              name={user.name}
-              src={user.avatarBase64 || undefined}
+              name={localUser?.name} // Используем localUser
+              src={localUser?.avatarBase64 || undefined} // Используем localUser
             />
             <Button as="label" size="sm" cursor="pointer" borderRadius="25" height="45px" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" isDisabled={loadingError}>
               Редактировать аватарку
               <input type="file" hidden accept="image/*" onChange={onSelectFile} />
             </Button>
           </Flex>
-          <Heading size="md">{user.name}</Heading>
-          <Text><b>Логин:</b> @{user.login}</Text>
-          <Text><b>Email:</b> {user.email}</Text>
-          <Text><b>Отдел:</b> {user.departmentName || "Не причислен к отделу"}</Text>
-          <Text><b>Должность:</b> {user.positionName}</Text>
+          <Heading size="md">{localUser?.name}</Heading> {/* Используем localUser */}
+          <Text><b>Логин:</b> @{localUser?.login}</Text> {/* Используем localUser */}
+          <Text><b>Email:</b> {localUser?.email}</Text> {/* Используем localUser */}
+          <Text><b>Отдел:</b> {localUser?.departmentName || "Не причислен к отделу"}</Text> {/* Используем localUser */}
+          <Text><b>Должность:</b> {localUser?.positionName}</Text> {/* Используем localUser */}
           </>
         )}
       </VStack>
@@ -252,6 +260,19 @@ export default function SettingsPage() {
           <Text whiteSpace="nowrap" mr={4}>Сменить пароль:</Text>
           <Button borderRadius="25" boxShadow= "0px 6px 5px 0px rgba(0, 0, 0, 0.40)" onClick={() => openModal("password")} onKeyDown={handleButtonKeyDown} isDisabled={ loadingError}>
             Начать
+          </Button>
+        </Flex>
+        <Divider />
+        <Flex align="center" justify="space-between">
+          <Text whiteSpace="nowrap" mr={4}>Выйти из аккаунта:</Text>
+          <Button 
+            borderRadius="25" 
+            boxShadow="0px 6px 5px 0px rgba(0, 0, 0, 0.40)" 
+            onClick={handleLogout} 
+            isDisabled={loadingError}
+            variant="red"
+          >
+            Выйти
           </Button>
         </Flex>
       </VStack>
@@ -306,7 +327,7 @@ export default function SettingsPage() {
                   value={newLogin}
                   onChange={e => setNewLogin(e.target.value)}
                   onKeyDown={e => handleKeyDown(e, submitLogin)}
-                  focusBorderColor={curErr ? "red.500" : "blue.500"}
+                  focusBorderColor={loginErr ? "red.500" : "blue.500"}
                   errorBorderColor="red.500"
                 />
                 <FormErrorMessage>{loginErr}</FormErrorMessage>
@@ -330,7 +351,7 @@ export default function SettingsPage() {
           <ModalCloseButton />
           <ModalBody pb={6}>
             {step === 1 ? (
-              <FormControl  isInvalid={!!curErr}>
+              <FormControl isInvalid={!!curErr}>
                 <FormLabel>Текущий пароль</FormLabel>
                 <InputGroup>
                   <Input
@@ -359,7 +380,7 @@ export default function SettingsPage() {
                 <Button boxShadow= "0px 4px 7px 0px rgba(0, 0, 0, 0.4)" mt={4} onClick={checkCurrent}>Далее</Button>
               </FormControl>
             ) : (
-              <FormControl  isInvalid={!!passErr}>
+              <FormControl isInvalid={!!passErr}>
                 <FormLabel>Новый пароль</FormLabel>
                 <InputGroup>
                   <Input
@@ -369,7 +390,7 @@ export default function SettingsPage() {
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     onKeyDown={e => handleKeyDown(e, submitPassword)}
-                    focusBorderColor={curErr ? "red.500" : "blue.500"}
+                    focusBorderColor={passErr ? "red.500" : "blue.500"} // Исправлено на passErr
                     errorBorderColor="red.500"
                   />
                   <InputRightElement>
@@ -422,5 +443,4 @@ export default function SettingsPage() {
     </Flex>
   );
 }
-
 
