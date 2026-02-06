@@ -1,6 +1,6 @@
 {
   "name": "task-manager-client",
-  "proxy": "https://localhost:7138",
+  "proxy": "https://localhost:7070",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
